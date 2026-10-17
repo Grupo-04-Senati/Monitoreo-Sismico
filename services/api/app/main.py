@@ -1,11 +1,7 @@
-import uuid
-
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import __version__
 from app.core.config import settings
-from app.core.errors import register_error_handlers
 from app.routers import (
     auth,
     eventos,
@@ -21,46 +17,24 @@ from app.routers import (
     reportes,
     usuarios,
     auditoria,
-    health,
 )
 
 app = FastAPI(
     title="Sistema de Monitoreo Sísmico API",
-    version=__version__,
-    description="API para monitoreo de eventos sísmicos, análisis y alertas. No emite alertas oficiales.",
-    # En produccion se apaga la documentacion interactiva
-    docs_url=None if settings.is_production else "/docs",
-    redoc_url=None,
-    openapi_url=None if settings.is_production else "/openapi.json",
+    version="0.1.0",
+    description="API para monitoreo de eventos sísmicos, análisis y alertas",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "X-Requested-With", "X-Request-ID"],
-    expose_headers=["X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def correlation_id(request: Request, call_next):
-    """Cada solicitud lleva un id que viaja en la respuesta y en los logs (se usara en la auditoria)."""
-    cid = request.headers.get("X-Request-ID", "")[:64] or uuid.uuid4().hex
-    request.state.correlation_id = cid
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = cid
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    return response
-
-
-register_error_handlers(app)
 
 API_PREFIX = "/api/v1"
 
-app.include_router(health.router, prefix=f"{API_PREFIX}/health", tags=["salud"])
 app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["auth"])
 app.include_router(eventos.router, prefix=f"{API_PREFIX}/events", tags=["eventos"])
 app.include_router(dashboard.router, prefix=f"{API_PREFIX}/dashboard", tags=["dashboard"])
@@ -79,4 +53,4 @@ app.include_router(auditoria.router, prefix=f"{API_PREFIX}/audit-logs", tags=["a
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "version": __version__}
+    return {"status": "ok", "version": "0.1.0"}

@@ -1,34 +1,17 @@
-from collections.abc import Iterator
-
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from app.core.config import settings
 
-# Acceso sincrono (decision D12). La conexion se abre al primer uso, no al importar.
-engine = create_engine(
-    settings.database_url,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    pool_pre_ping=True,
-)
-SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+engine = create_async_engine(settings.database_url, echo=settings.API_DEBUG)
+
+AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
-    """Base de los modelos. Convencion de nombres estable para que Alembic genere migraciones reproducibles."""
-
-    metadata = MetaData(
-        naming_convention={
-            "ix": "ix_%(column_0_label)s",
-            "uq": "uq_%(table_name)s_%(column_0_name)s",
-            "ck": "ck_%(table_name)s_%(constraint_name)s",
-            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-            "pk": "pk_%(table_name)s",
-        }
-    )
+    pass
 
 
-def get_db() -> Iterator[Session]:
-    with SessionLocal() as session:
+async def get_db() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
         yield session

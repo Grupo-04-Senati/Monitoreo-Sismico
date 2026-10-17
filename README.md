@@ -2,23 +2,6 @@
 
 Plataforma web empresarial de monitoreo sísmico, análisis estadístico y gestión de alertas.
 
-
-## Documentación y equipo
-
-Proyecto grupal de 4 personas con asistentes de IA. Empieza por `CONTEXTO.md`.
-
-| Documento | Para qué sirve |
-|---|---|
-| [CONTEXTO.md](CONTEXTO.md) | Objetivo, límites y decisiones: léelo antes de decidir algo |
-| [PROCESO.md](PROCESO.md) | Fases, integración por capas y criterios de "terminada" |
-| [AGENTS.md](AGENTS.md) | Reglas para cualquier IA que trabaje en el repo |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Ramas, Pull Requests y revisión |
-| [docs/EQUIPO.md](docs/EQUIPO.md) | Quién es dueño de qué módulo |
-| [docs/AVANCE.md](docs/AVANCE.md) | Qué se está haciendo ahora |
-| [DOCUMENTACION.md](DOCUMENTACION.md) | Registro técnico y razonamiento de las decisiones |
-| [EXPOSICION.md](EXPOSICION.md) | Guía de la exposición académica (se completa al final) |
-| [docs/referencia/](docs/referencia/README.md) | Documento base original (PDF) |
-
 ## Requisitos
 
 - [Node.js](https://nodejs.org/) 20 o superior
@@ -45,34 +28,12 @@ Abrir **http://localhost:5173** en el navegador.
 
 ## Cuentas de prueba
 
-> Simuladas y solo para desarrollo: la interfaz aún no usa un login real. Se retiran al integrarlo (Fase 1).
-
 | Correo | Contraseña | Rol |
 |---|---|---|
 | `admin@sismo.pe` | `Admin123!` | Administrador |
 | `analista@sismo.pe` | `Analista123!` | Analista |
 | `operador@sismo.pe` | `Operador123!` | Operador de alertas |
 | `auditor@sismo.pe` | `Auditor123!` | Auditor |
-
-## Backend (API)
-
-Requiere Python 3.11 o superior y PostgreSQL. Con PowerShell, desde la raíz:
-
-```powershell
-copy .env.example .env
-# edita .env: sin Docker pon POSTGRES_HOST=localhost y tu clave real (o define DATABASE_URL), y crea la base vacía:
-#   psql -U postgres -c "CREATE DATABASE sismo_db;"
-cd services\api
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload        # http://localhost:8000/docs  ·  estado: /api/v1/health/ready
-```
-
-Pruebas (desde la raíz, con el entorno virtual activo): `python -m pytest -rs`. Las que usan PostgreSQL se **omiten** si no hay base alcanzable; `-rs` muestra cuáles. Las pruebas de migraciones crean y borran su propia base `<nombre>_test` (el usuario necesita permiso `CREATEDB`).
-
-Celery y Redis (`REDIS_URL`) solo hacen falta para las tareas en segundo plano; la API y sus pruebas funcionan sin ellos.
 
 ## Estructura del proyecto
 
