@@ -54,6 +54,26 @@ Abrir **http://localhost:5173** en el navegador.
 | `operador@sismo.pe` | `Operador123!` | Operador de alertas |
 | `auditor@sismo.pe` | `Auditor123!` | Auditor |
 
+## Backend (API)
+
+Requiere Python 3.11 o superior y PostgreSQL. Con PowerShell, desde la raíz:
+
+```powershell
+copy .env.example .env
+# edita .env: sin Docker pon POSTGRES_HOST=localhost y tu clave real (o define DATABASE_URL), y crea la base vacía:
+#   psql -U postgres -c "CREATE DATABASE sismo_db;"
+cd services\api
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload        # http://localhost:8000/docs  ·  estado: /api/v1/health/ready
+```
+
+Pruebas (desde la raíz, con el entorno virtual activo): `python -m pytest -rs`. Las que usan PostgreSQL se **omiten** si no hay base alcanzable; `-rs` muestra cuáles. Las pruebas de migraciones crean y borran su propia base `<nombre>_test` (el usuario necesita permiso `CREATEDB`).
+
+Celery y Redis (`REDIS_URL`) solo hacen falta para las tareas en segundo plano; la API y sus pruebas funcionan sin ellos.
+
 ## Estructura del proyecto
 
 ```

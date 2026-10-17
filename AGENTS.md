@@ -44,7 +44,7 @@ Estas piezas las usan varias personas; cámbialas con cuidado y avisando:
 
 ```
 apps/web/            React 18 + TypeScript + Vite 5 + Tailwind 3  -> desde la raíz: npm run dev:web | npm run test:web | npm run build:web
-services/api/        FastAPI                        -> python -m pytest (cuando exista la base de backend)
+services/api/        FastAPI (síncrono) + Celery                  -> desde la raíz: python -m pytest -rs (tests en tests/api)
 services/ingestion/  conectores de fuentes (Fase 2)
 services/ml/         laboratorio de ML (Fase 6)
 database/            migraciones Alembic, seeds, diagramas
