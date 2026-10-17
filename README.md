@@ -2,6 +2,23 @@
 
 Plataforma web empresarial de monitoreo sísmico, análisis estadístico y gestión de alertas.
 
+
+## Documentación y equipo
+
+Proyecto grupal de 4 personas con asistentes de IA. Empieza por `CONTEXTO.md`.
+
+| Documento | Para qué sirve |
+|---|---|
+| [CONTEXTO.md](CONTEXTO.md) | Objetivo, límites y decisiones: léelo antes de decidir algo |
+| [PROCESO.md](PROCESO.md) | Fases, integración por capas y criterios de "terminada" |
+| [AGENTS.md](AGENTS.md) | Reglas para cualquier IA que trabaje en el repo |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Ramas, Pull Requests y revisión |
+| [docs/EQUIPO.md](docs/EQUIPO.md) | Quién es dueño de qué módulo |
+| [docs/AVANCE.md](docs/AVANCE.md) | Qué se está haciendo ahora |
+| [DOCUMENTACION.md](DOCUMENTACION.md) | Registro técnico y razonamiento de las decisiones |
+| [EXPOSICION.md](EXPOSICION.md) | Guía de la exposición académica (se completa al final) |
+| [docs/referencia/](docs/referencia/README.md) | Documento base original (PDF) |
+
 ## Requisitos
 
 - [Node.js](https://nodejs.org/) 20 o superior
@@ -27,6 +44,8 @@ npm run dev
 Abrir **http://localhost:5173** en el navegador.
 
 ## Cuentas de prueba
+
+> Simuladas y solo para desarrollo: la interfaz aún no usa un login real. Se retiran al integrarlo (Fase 1).
 
 | Correo | Contraseña | Rol |
 |---|---|---|
