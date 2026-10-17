@@ -128,6 +128,12 @@ A: plataforma e identidad; B: datos sísmicos; C: analítica y visualización; D
 - **Por qué:** se aprovecha la interfaz ya hecha, no se migran versiones sin motivo y cada capa se revisa por separado en su PR.
 - **Costo:** durante la integración conviven dos convenciones de configuración (`DATABASE_URL` frente a `POSTGRES_*`); la capa 3 debe reconciliarlas.
 
+### 2026-10-16 — Capa 3: backend base en la repo del grupo
+- **Qué cambia (respetando la estructura del grupo):** `app/core/config.py` (variables `POSTGRES_*` del grupo más `DATABASE_URL` opcional, `ENVIRONMENT`, validación que impide arrancar en producción con claves de ejemplo, `API_DEBUG=true`, cookie insegura u orígenes `http://`), `app/db/database.py` pasa de asíncrono (asyncpg) a síncrono (psycopg 3, D12), `app/db/models.py` (`SystemSetting`), `app/core/errors.py` (formato de error único), `app/routers/health.py` (`/api/v1/health` y `/ready`), `app/main.py` (correlation ID, cabeceras de seguridad, docs apagadas en producción; se conservan todos los routers y el `/health` del grupo), Alembic con migración `0001`, `requirements.txt` sin `asyncpg` ni `psycopg2`.
+- **Pruebas** en `tests/api` (la carpeta del grupo): salud, configuración, migraciones (una sola cabeza de Alembic, subir/bajar/`alembic check`) y cableado de Celery sin Redis. **27 pasan** en local con PostgreSQL 18 real, ninguna omitida.
+- **Correcciones a archivos del grupo:** `.env.example` definía `API_CORS_ORIGINS`, pero el código leía `CORS_ORIGINS` (la variable nunca se aplicaba); ahora se llama `CORS_ORIGINS`. Se agregaron `ENVIRONMENT`, `COOKIE_SECURE` y `DATABASE_URL`.
+- **No verificado:** el CI de la API en GitHub (usa Python 3.11 como `Dockerfile.api`; local se probó con 3.13), Docker (`Dockerfile.api` tiene como contexto `services/api` y no ve `database/migrations`), Celery contra un Redis real.
+
 ## 3. Lecciones aprendidas
 
 - **Las variables de entorno pesan más que el `.env`.** Un valor de reserva puesto con `os.environ.setdefault` en `conftest.py` tapaba al `.env` y las pruebas con base de datos se omitían sin avisar. Ahora el valor de reserva solo se usa si el `.env` no lo define, y las omisiones se muestran con `-rs`.

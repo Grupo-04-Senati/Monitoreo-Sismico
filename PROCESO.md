@@ -53,7 +53,7 @@ El grupo ya tenía una interfaz de los 13 módulos con datos de ejemplo; el repo
 |---|---|---|
 | 1 | Documentos de equipo, plantilla de PR, CODEOWNERS y CI web. No toca código del grupo | 🟡 en PR, sin verificar en GitHub |
 | 2 | Higiene: quitar `tsconfig.tsbuildinfo` del repo y las cuentas simuladas del README al llegar el login real | ⬜ |
-| 3 | Backend base: configuración segura, errores, correlation ID, migración 0001, pruebas con PostgreSQL real y CI de API (síncrono, con Celery + Redis del grupo) | ⬜ (existe y está verificada en el repo original; falta traerla y adaptarla a las rutas del grupo) |
+| 3 | Backend base: configuración segura, errores, correlation ID, migración 0001, pruebas con PostgreSQL real y CI de API (síncrono, con Celery + Redis del grupo) | 🟡 en PR: 27 pruebas pasan en local (Python 3.13, PostgreSQL 18); el CI usa Python 3.11 y está sin verificar en GitHub |
 | 4 | Componentes puntuales (etiquetas de las 4 categorías, pantalla de estado, pruebas web) y despliegue vacío en Vercel + Render | ⬜ |
 
 ## Checklist de la Fase 0 (estado al 2026-10-16)
@@ -65,7 +65,7 @@ El grupo ya tenía una interfaz de los 13 módulos con datos de ejemplo; el repo
 | Interfaz de los 13 módulos con datos de ejemplo | 🟡 compila (build verificado en una copia temporal, 2026-10-16); sin pruebas; no probada módulo por módulo en el navegador |
 | Documentos de equipo (capa 1) | 🟡 en este PR |
 | CI web (capa 1) | 🟡 escrito; se verifica al abrir el PR |
-| Backend base con pruebas (capa 3) | ⬜ |
+| Backend base con pruebas (capa 3) | 🟡 verificado en local; CI de la API sin verificar en GitHub; Docker (`Dockerfile.api`) no incluye `database/migrations` en su contexto: sin verificar |
 | Despliegue vacío en Vercel + Render (capa 4) | ⬜ |
 | **Terminada cuando:** la web desplegada muestra el estado de la API desplegada, la API consulta la base y el CI pasa | ⬜ |
 

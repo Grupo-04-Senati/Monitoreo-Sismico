@@ -7,7 +7,7 @@
 
 | Quién | Rama | Qué hace | Toca contratos compartidos | Desde |
 |---|---|---|---|---|
-| (quien integra) | `integracion-capa-1` | Capa 1 de la integración: documentos de equipo y CI web | No | 2026-10-16 |
+| (quien integra) | `capa-3-base-backend` | Capa 3: backend base (config, db síncrona, migración 0001, pruebas, CI API) | **Sí:** `config.py`, `database.py`, migraciones, `.env.example`, `requirements.txt` | 2026-10-16 |
 
 ## Bloqueos y avisos
 

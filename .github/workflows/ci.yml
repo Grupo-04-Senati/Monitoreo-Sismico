@@ -1,4 +1,4 @@
-# Integración continua. Capa 1: solo la web (el backend aún no tiene pruebas; su CI llega con la capa 3).
+# Integración continua: la web (capa 1) y la API con PostgreSQL real (capa 3).
 # Correr aquí lo mismo que se corre a mano antes de abrir un PR.
 name: CI
 
@@ -10,6 +10,39 @@ permissions:
   contents: read
 
 jobs:
+  api:
+    name: API (migraciones y pruebas)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sismo_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sismo_db
+      API_SECRET_KEY: clave-solo-para-integracion-continua-no-es-secreta-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # Misma version que infra/docker/Dockerfile.api
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - run: python -m pip install -r services/api/requirements.txt
+      - name: Migraciones desde cero y sin diferencias con los modelos
+        working-directory: services/api
+        run: |
+          python -m alembic upgrade head
+          python -m alembic check
+      - name: Pruebas
+        run: python -m pytest -rs
+
   web:
     name: Web (compilación y pruebas)
     runs-on: ubuntu-latest
