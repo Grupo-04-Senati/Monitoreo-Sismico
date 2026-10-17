@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: sismo-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sismo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sismo_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-sismo_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sismo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sismo-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ../../services/api
+      dockerfile: ../../infra/docker/Dockerfile.api
+    container_name: sismo-api
+    environment:
+      POSTGRES_HOST: db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: ../../services/api
+      dockerfile: ../../infra/docker/Dockerfile.api
+    container_name: sismo-worker
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      POSTGRES_HOST: db
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: ../../infra/docker/Dockerfile.web
+    container_name: sismo-web
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

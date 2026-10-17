@@ -1,0 +1,352 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary – azul marino */
+  --primary-50: #eef2f7;
+  --primary-100: #d5dde9;
+  --primary-200: #aab9d3;
+  --primary-300: #7f95bd;
+  --primary-400: #5471a7;
+  --primary-500: #3a5a8c;
+  --primary-600: #2d4670;
+  --primary-700: #213354;
+  --primary-800: #152038;
+  --primary-900: #0b1120;
+  --primary-950: #060a14;
+
+  /* Accent – cyan de la paleta de acceso (login/registro) */
+  --accent-400: #4cc9e0;
+  --accent-500: #0e9fbc;
+  --accent-600: #0a7c93;
+
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-tertiary: #f1f5f9;
+
+  /* Content */
+  --content: #0f172a;
+  --content-secondary: #475569;
+  --content-muted: #94a3b8;
+
+  /* Border */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  /* Semantic (operativo, NO de peligro sísmico) */
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 56px;
+
+  /* Paleta de acceso (login/registro) */
+  --auth-navy: #0b2545;
+  --auth-navy-deep: #081b33;
+  --auth-card: #13315c;
+  --auth-border: #1f4a7a;
+  --auth-border-strong: #2b5c8f;
+  --auth-text-soft: #d9e1e8;
+  --auth-text-muted: #a9bcd0;
+  --auth-text-dim: #7e97ac;
+  --auth-cyan: #0e9fbc;
+  --auth-cyan-dark: #0a7c93;
+  --auth-cyan-light: #4cc9e0;
+
+  /* Barra lateral de cristal (sigue el tema) */
+  --sidebar-bg: rgba(255, 255, 255, 0.9);
+  --sidebar-border: rgba(31, 74, 122, 0.16);
+  --sidebar-fg: #475569;
+  --sidebar-fg-strong: #0b2545;
+  --sidebar-group: #8ba0b6;
+  --sidebar-hover-bg: rgba(14, 159, 188, 0.09);
+  --sidebar-active-bg: linear-gradient(90deg, rgba(14, 159, 188, 0.18), rgba(14, 159, 188, 0.02));
+  --sidebar-active-fg: #0a5570;
+  --sidebar-active-icon: #0a7c93;
+  --sidebar-glow: rgba(14, 159, 188, 0.55);
+  --sidebar-shadow: 1px 0 0 rgba(31, 74, 122, 0.1), 10px 0 40px rgba(11, 37, 69, 0.08);
+
+  /* Ventanas de cristal con borde luminoso (tarjetas) */
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(31, 74, 122, 0.14);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --glass-shadow: 0 6px 22px rgba(11, 37, 69, 0.08), 0 0 0 1px rgba(14, 159, 188, 0.06);
+  --glass-hover-border: rgba(14, 159, 188, 0.5);
+  --glass-hover-shadow:
+    0 0 0 1px rgba(14, 159, 188, 0.24),
+    0 16px 44px rgba(11, 37, 69, 0.14),
+    0 0 30px rgba(14, 159, 188, 0.18);
+  --topbar-bg: rgba(255, 255, 255, 0.9);
+
+  /* Gráficos y mapa: fondo propio del tema, rejilla y terreno */
+  --chart-bg: rgba(255, 255, 255, 0.72);
+  --chart-border: rgba(31, 74, 122, 0.1);
+  --chart-grid: rgba(15, 23, 42, 0.08);
+  --map-land: #e6edf5;
+  --map-empty: #eef3f9;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Misma paleta del login/registro para todo el modo oscuro */
+  --surface: #13315c;
+  --surface-secondary: #0b2545;
+  --surface-tertiary: #0f2a4a;
+
+  --content: #ffffff;
+  --content-secondary: #a9bcd0;
+  --content-muted: #7e97ac;
+
+  --border: #1f4a7a;
+  --border-strong: #2b5c8f;
+
+  /* Barra lateral: cristal sobre el fondo negro estrellado del login */
+  --sidebar-bg: rgba(11, 37, 69, 0.72);
+  --sidebar-border: rgba(76, 201, 224, 0.18);
+  --sidebar-fg: #a9bcd0;
+  --sidebar-fg-strong: #ffffff;
+  --sidebar-group: #8fb4c9;
+  --sidebar-hover-bg: rgba(76, 201, 224, 0.1);
+  --sidebar-active-bg: linear-gradient(90deg, rgba(14, 159, 188, 0.34), rgba(14, 159, 188, 0.03));
+  --sidebar-active-fg: #ffffff;
+  --sidebar-active-icon: #4cc9e0;
+  --sidebar-glow: rgba(76, 201, 224, 0.85);
+  --sidebar-shadow: 1px 0 0 rgba(76, 201, 224, 0.22), 10px 0 46px rgba(14, 159, 188, 0.1);
+
+  /* Ventanas de cristal con borde luminoso */
+  --glass-bg: rgba(19, 49, 92, 0.72);
+  --glass-border: rgba(76, 201, 224, 0.2);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(76, 201, 224, 0.08);
+  --glass-hover-border: rgba(76, 201, 224, 0.62);
+  --glass-hover-shadow:
+    0 0 0 1px rgba(76, 201, 224, 0.32),
+    0 18px 52px rgba(0, 0, 0, 0.55),
+    0 0 36px rgba(14, 159, 188, 0.28);
+  --topbar-bg: rgba(11, 37, 69, 0.72);
+
+  /* Gráficos y mapa: fondo propio del tema (oscuro), rejilla y terreno */
+  --chart-bg: rgba(6, 9, 15, 0.55);
+  --chart-border: rgba(76, 201, 224, 0.16);
+  --chart-grid: rgba(76, 201, 224, 0.16);
+  --map-land: #1d4671;
+  --map-empty: #16375a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--surface-secondary);
+  color: var(--content);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fondo animado detrás de la app: estrellas (oscuro) y nieve (claro) */
+html[data-theme="dark"] {
+  background: #06090f;
+}
+
+[data-theme="dark"] body,
+.app-main {
+  background: transparent;
+}
+
+/* Focus visible para accesibilidad */
+:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-tertiary) 25%, var(--surface-secondary) 50%, var(--surface-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* Transición al cambiar de módulo / dashboard */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: page-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Barra lateral de cristal ────────────────────────── */
+.app-sidebar {
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: var(--sidebar-shadow);
+}
+
+.app-sidebar-head {
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.app-brand-mark {
+  background: linear-gradient(135deg, var(--auth-cyan) 0%, var(--auth-cyan-dark) 100%);
+  box-shadow: 0 0 24px rgba(14, 159, 188, 0.45);
+}
+
+.app-brand-title {
+  color: var(--sidebar-fg-strong);
+  text-shadow: 0 0 20px var(--sidebar-glow);
+}
+
+.app-brand-sub {
+  color: var(--sidebar-group);
+}
+
+.app-nav-group {
+  color: var(--sidebar-group);
+}
+
+.app-nav-item {
+  position: relative;
+  height: 40px;
+  font-size: 14px;
+  color: var(--sidebar-fg);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.app-nav-item:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-fg-strong);
+}
+
+.app-nav-item[aria-current="page"] {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-fg);
+  font-weight: 500;
+}
+
+.app-nav-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--auth-cyan-light), var(--auth-cyan));
+  box-shadow: 0 0 12px var(--sidebar-glow);
+}
+
+.app-nav-item[aria-current="page"] svg {
+  color: var(--sidebar-active-icon);
+}
+
+.app-sidebar-sep {
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.app-tip {
+  background: var(--auth-card);
+  color: #ffffff;
+  border: 1px solid var(--auth-border-strong);
+}
+
+/* ── Barra superior de cristal ───────────────────────── */
+.app-topbar {
+  background: var(--topbar-bg);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+}
+
+/* ── Ventanas de cristal con borde luminoso (al pasar el cursor se
+      inclinan y se mueven, como la tarjeta del login) ──── */
+.auth-surface {
+  position: relative;
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-hi);
+  transition: background-color 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
+}
+
+.auth-surface:hover {
+  border-color: var(--glass-hover-border);
+  box-shadow: var(--glass-hover-shadow), var(--glass-hi);
+}
+
+/* ── Gráficos y mapa: fondo y rejilla propios de cada tema ── */
+.chart-plot {
+  background: var(--chart-bg);
+  box-shadow: inset 0 0 0 1px var(--chart-border);
+}
+
+.chart-grid-line {
+  border-color: var(--chart-grid);
+}
+
+/* Movimiento 3D: el transform lo escribe el cursor (useTiltCards) */
+.tilt {
+  will-change: transform;
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms ease,
+    border-color 320ms ease;
+}
+
+/* La tarjeta señalada se dibuja encima de las vecinas (evita parpadeos) */
+.tilt:hover {
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+  .auth-surface,
+  .tilt {
+    transition: none;
+  }
+}
