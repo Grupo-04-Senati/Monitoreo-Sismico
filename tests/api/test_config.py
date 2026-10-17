@@ -3,6 +3,13 @@ from pydantic import ValidationError
 
 from app.core.config import Settings
 
+@pytest.fixture(autouse=True)
+def entorno_limpio(monkeypatch):
+    """Estas pruebas no deben depender de variables del entorno (p. ej. DATABASE_URL, que el CI sí define)."""
+    for nombre in Settings.model_fields:
+        monkeypatch.delenv(nombre, raising=False)
+
+
 SECRET_OK = "k9Xv2QmT7rLp4WzB8nJd5HcY1sFg6AeU"
 PROD = {
     "ENVIRONMENT": "production",
