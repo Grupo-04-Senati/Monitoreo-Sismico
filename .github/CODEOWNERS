@@ -1,0 +1,12 @@
+# Pide revisión automática al dueño del área (ver docs/EQUIPO.md).
+# ACTIVAR al confirmar los usuarios de GitHub: reemplaza @usuario-A..D y quita el "#" de cada línea.
+# Un usuario inexistente invalida el archivo, por eso está comentado por ahora.
+#
+# /services/api/app/core/        @usuario-A
+# /infra/                        @usuario-A
+# /.github/                      @usuario-A
+# /render.yaml                   @usuario-A
+# /services/ingestion/           @usuario-B
+# /database/migrations/          @usuario-B
+# /apps/web/src/modules/         @usuario-C
+# /services/ml/                  @usuario-D

@@ -1,0 +1,27 @@
+# Integración continua. Capa 1: solo la web (el backend aún no tiene pruebas; su CI llega con la capa 3).
+# Correr aquí lo mismo que se corre a mano antes de abrir un PR.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web (compilación y pruebas)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Compilación (TypeScript + Vite)
+        run: npm run build:web
+      - name: Pruebas (sin fallar mientras no existan)
+        run: npm exec --workspace=apps/web -- vitest run --passWithNoTests
