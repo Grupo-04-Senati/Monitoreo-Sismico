@@ -9,7 +9,6 @@ import { useTiltCards } from "@/lib/useTiltCards";
 
 export default function ErpLayout() {
   const { pathname } = useLocation();
-  const isDashboard = pathname === "/";
   const [revealed, setRevealed] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   const sideRef = useRef<HTMLDivElement>(null);
@@ -36,7 +35,7 @@ export default function ErpLayout() {
     if (!el) return;
     if (revealed) el.removeAttribute("inert");
     else el.setAttribute("inert", "");
-  }, [revealed, isDashboard]);
+  }, [revealed]);
 
   return (
     <div className="relative min-h-screen">
@@ -44,27 +43,23 @@ export default function ErpLayout() {
       <ParticleBackground variant={theme === "dark" ? "stars" : "snow"} />
 
       <div className="relative z-10 flex h-screen overflow-hidden">
-        {!isDashboard && (
-          <>
-            {/* Zona sensible: al pasar el cursor por el borde izquierdo se muestra el menú */}
-            <div
-              onMouseEnter={showSidebar}
-              className="fixed left-0 top-0 h-full w-3 z-40"
-              aria-hidden="true"
-            />
-            <div
-              ref={sideRef}
-              onMouseEnter={showSidebar}
-              onMouseLeave={hideSidebar}
-              className={`fixed left-0 top-0 h-full z-40 ${
-                revealed ? "translate-x-0" : "-translate-x-full pointer-events-none"
-              }`}
-              style={{ transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)" }}
-            >
-              <Sidebar collapsed={false} hovered />
-            </div>
-          </>
-        )}
+        {/* Zona sensible: al pasar el cursor por el borde izquierdo se muestra el menú */}
+        <div
+          onMouseEnter={showSidebar}
+          className="fixed left-0 top-0 h-full w-3 z-40"
+          aria-hidden="true"
+        />
+        <div
+          ref={sideRef}
+          onMouseEnter={showSidebar}
+          onMouseLeave={hideSidebar}
+          className={`fixed left-0 top-0 h-full z-40 ${
+            revealed ? "translate-x-0" : "-translate-x-full pointer-events-none"
+          }`}
+          style={{ transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)" }}
+        >
+          <Sidebar collapsed={false} hovered />
+        </div>
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <Topbar />
           <main className="app-main flex-1 overflow-y-auto p-5 bg-surface-secondary">

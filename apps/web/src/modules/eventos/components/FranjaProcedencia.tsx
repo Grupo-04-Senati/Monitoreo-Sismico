@@ -1,5 +1,5 @@
 import type { Procedencia } from "../services/eventos.service";
-import { fmtDateTimeUTC5 } from "@/lib/mock/data";
+import { fmtDateTimeUTC5 } from "@/lib/format";
 
 /** Franja de procedencia: fuente, sincronización, licencia/términos y rango del catálogo. */
 export default function FranjaProcedencia({ procedencia }: { procedencia: Procedencia }) {

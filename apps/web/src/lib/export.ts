@@ -1,5 +1,5 @@
 import type { SeismicEvent } from "@/types";
-import { fmtDateTimeUTC5, fmtDateUTC5 } from "@/lib/mock/data";
+import { fmtDateTimeUTC5, fmtDateUTC5 } from "@/lib/format";
 import { niceScale, logTicks } from "@/components/charts/BarChart";
 
 /* ════ Descarga genérica ═══════════════════════════════ */
@@ -16,8 +16,8 @@ export function downloadFile(filename: string, data: string | Blob, mime = "appl
 }
 
 /* ════ CSV (BOM para Excel) ═══════════════════════════ */
-function csvCell(v: string | number): string {
-  const s = String(v);
+function csvCell(v: string | number | null): string {
+  const s = v == null ? "" : String(v);
   return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -272,6 +272,81 @@ export function exportChartPng(
   canvas.toBlob((blob) => {
     if (blob) downloadFile(filename, blob, "image/png");
   }, "image/png");
+}
+
+/* ════ CSV genérico de filas ya calculadas ═══════════ */
+export function exportFilasCsv(
+  columnas: string[],
+  filas: (string | number)[][],
+  filename = "datos.csv",
+): void {
+  const lines = [columnas.join(";")];
+  for (const fila of filas) lines.push(fila.map(csvCell).join(";"));
+  downloadFile(filename, "\uFEFF" + lines.join("\r\n"), "text/csv;charset=utf-8");
+}
+
+/* ════ PNG a partir de un <svg> en pantalla ═══════════
+   Serializa el SVG resolviendo los colores del tema (variables CSS) a
+   valores concretos para que la imagen exportada no dependa del DOM. */
+export function exportSvgPng(
+  svg: SVGSVGElement,
+  filename = "grafico.png",
+  opts: { scale?: number; background?: string } = {},
+): void {
+  const scale = opts.scale ?? 2;
+  const rect = svg.getBoundingClientRect();
+  const w = Math.max(1, Math.round(rect.width || Number(svg.getAttribute("width")) || 1000));
+  const h = Math.max(1, Math.round(rect.height || Number(svg.getAttribute("height")) || 600));
+  const bg = opts.background ?? cssVar("--surface", "#ffffff");
+
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(w));
+  clone.setAttribute("height", String(h));
+  if (!clone.getAttribute("viewBox")) clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+  const origNodes: Element[] = [svg, ...Array.from(svg.querySelectorAll("*"))];
+  const cloneNodes: Element[] = [clone, ...Array.from(clone.querySelectorAll("*"))];
+  const PROPS = [
+    "fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width",
+    "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "opacity",
+    "font-size", "font-family", "font-weight", "text-anchor",
+    "stop-color", "stop-opacity",
+  ];
+  for (let i = 0; i < origNodes.length; i++) {
+    const target = cloneNodes[i];
+    if (!target) continue;
+    const cs = getComputedStyle(origNodes[i]);
+    for (const p of PROPS) {
+      const v = cs.getPropertyValue(p).trim();
+      if (v) target.setAttribute(p, v);
+    }
+  }
+
+  const fondo = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  fondo.setAttribute("x", "0");
+  fondo.setAttribute("y", "0");
+  fondo.setAttribute("width", "100%");
+  fondo.setAttribute("height", "100%");
+  fondo.setAttribute("fill", bg);
+  clone.insertBefore(fondo, clone.firstChild);
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.drawImage(img, 0, 0, w, h);
+    canvas.toBlob((blob) => {
+      if (blob) downloadFile(filename, blob, "image/png");
+    }, "image/png");
+  };
+  img.src = url;
 }
 
 /* ════ Copiar enlace con los filtros ══════════════════ */

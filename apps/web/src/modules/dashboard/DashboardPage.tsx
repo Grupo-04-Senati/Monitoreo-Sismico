@@ -1,40 +1,36 @@
 import { useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import ExpandModal from "@/components/ui/ExpandModal";
 import AreaChart from "@/components/charts/AreaChart";
 import HBarChart from "@/components/charts/HBarChart";
 import { type ChartDatum } from "@/components/charts/BarChart";
-import RegionMap from "@/components/charts/RegionMap";
 import Combobox from "@/components/ui/Combobox";
 import LiveClock from "@/components/ui/LiveClock";
 import {
   IconDatabase, IconFilter, IconClock, IconDownload, IconCheck,
   IconEvents, IconMap, IconAnalytics, IconML, IconEstimate, IconAlertRule,
-  IconAlertCenter, IconSource, IconReport, IconUsers, IconAudit, IconSettings, IconShield,
+  IconAlertCenter, IconSource, IconReport, IconUsers, IconAudit, IconSettings, IconShield, IconInfo,
 } from "@/components/ui/Icons";
 import { useAuth } from "@/app/auth/AuthContext";
+import { useCalidadDatos } from "./hooks/useCalidadDatos";
+import { useDashboardData } from "./hooks/useDashboardData";
 import { ROLE_LABELS } from "@/types/auth";
 import {
-  mockEvents, mockSources, mockAlerts, mockUsers, NOW,
-  filterEvents, inPeriod, periodLabel, toTimeSeries, toMagnitudeBuckets,
-  groupTimeSeries, medianDepth, maxMagnitudeEvent, slugify,
-  fmtDateTimeUTC5, fmtTimeUTC5, fmtDayLong,
-  REGION_OPTIONS, DATA_RANGE_LABEL, DATA_MIN_DAY, DATA_MAX_DAY,
+  filterEvents, periodLabel, toTimeSeries, toMagnitudeBuckets,
+  groupTimeSeries, medianDepth, meanDepth, maxMagnitudeEvent, REGION_OPTIONS,
   type TimeGranularity,
-} from "@/lib/mock/data";
+} from "@/lib/catalogo";
+import {
+  NOW, DATA_RANGE_LABEL, DATA_MIN_DAY, DATA_MAX_DAY,
+} from "@/lib/ancla";
+import { slugify, fmtDateTimeUTC5, fmtTimeUTC5, fmtDayLong } from "@/lib/format";
+import { SOURCE_NAME } from "@/config/fuente";
 import { exportEventsCsv, exportChartPng, copyText, csvDateName } from "@/lib/export";
-import { provinceStats, provinceDistricts, ALL_PROVINCES, findProvince } from "@/lib/mock/provinces";
 import type { SeismicEvent } from "@/types";
 
 const DEFAULT_PERIOD = "30d";
-const SRC = "IGP";
-
-/* Opciones del buscador de provincias (197, con su región) */
-const PROVINCE_OPTIONS = ALL_PROVINCES.map((p) => ({
-  value: p.name,
-  label: p.name,
-  hint: p.deptName,
-}));
+const SRC = SOURCE_NAME;
 
 /* Opciones del buscador de regiones (25) */
 const REGION_COMBO = REGION_OPTIONS.map((r) => ({ value: r.slug, label: r.name }));
@@ -80,6 +76,13 @@ interface ModalFilters {
 /* ── Tarjetas de módulos (mismo orden/permisos que el sidebar) ── */
 type ModuleStatus = "Con datos" | "Vacío" | "Capa pendiente";
 
+interface TileCtx {
+  events: SeismicEvent[];
+  fuente: { total: number; habilitadas: number } | null;
+  usuarios: number | null;
+  reportes: number | null;
+}
+
 interface TileGroup {
   title: string;
   items: {
@@ -88,7 +91,7 @@ interface TileGroup {
     desc: string;
     permission: string;
     status: ModuleStatus;
-    stat: (events: SeismicEvent[]) => string;
+    stat: (ctx: TileCtx) => string;
     icon: React.ComponentType<{ size?: number; className?: string }>;
   }[];
 }
@@ -100,12 +103,12 @@ const TILE_GROUPS: TileGroup[] = [
       {
         to: "/eventos", label: "Eventos sísmicos", permission: "eventos", status: "Con datos",
         desc: "Catálogo completo con filtros, detalle y exportación.", icon: IconEvents,
-        stat: (E) => `${E.length} eventos`,
+        stat: (ctx) => `${ctx.events.length} eventos`,
       },
       {
-        to: "/mapa", label: "Mapa sísmico", permission: "mapa", status: "Capa pendiente",
-        desc: "Distribución geográfica; la capa base se cargará aquí.", icon: IconMap,
-        stat: (E) => `${new Set(E.map((e) => e.region)).size} regiones con eventos`,
+        to: "/mapa-sismico", label: "Mapa sísmico", permission: "mapa", status: "Capa pendiente",
+        desc: "Distribución geográfica; carga un GeoJSON para ver regiones y eventos.", icon: IconMap,
+        stat: (ctx) => `${new Set(ctx.events.map((e) => e.region)).size} regiones con eventos`,
       },
     ],
   },
@@ -115,22 +118,22 @@ const TILE_GROUPS: TileGroup[] = [
       {
         to: "/analisis", label: "Análisis estadístico", permission: "analisis", status: "Con datos",
         desc: "Distribuciones, series y relaciones del catálogo.", icon: IconAnalytics,
-        stat: (E) => (E.length ? `Mag. máx. ${Math.max(...E.map((e) => e.magnitude)).toFixed(1)}` : "Mag. máx. —"),
+        stat: (ctx) => (ctx.events.length ? `Mag. máx. ${Math.max(...ctx.events.map((e) => e.magnitude)).toFixed(1)}` : "Mag. máx. —"),
       },
       {
         to: "/preparacion-datos", label: "Preparación de datos", permission: "preparacion", status: "Con datos",
         desc: "Limpieza, deduplicación y control de calidad.", icon: IconDatabase,
-        stat: () => "Calidad 99.4%",
+        stat: () => "Pendiente de backend",
       },
       {
         to: "/modelos-ml", label: "Modelos ML", permission: "modelos", status: "Vacío",
         desc: "Entrenamiento y evaluación de experimentos.", icon: IconML,
-        stat: () => "0 experimentos",
+        stat: () => "Pendiente de backend",
       },
       {
         to: "/estimaciones", label: "Estimaciones", permission: "estimaciones", status: "Vacío",
         desc: "Resultados experimentales con incertidumbre.", icon: IconEstimate,
-        stat: () => "0 publicadas",
+        stat: () => "Pendiente de backend",
       },
     ],
   },
@@ -140,12 +143,12 @@ const TILE_GROUPS: TileGroup[] = [
       {
         to: "/reglas-alertas", label: "Reglas de alertas", permission: "reglas", status: "Con datos",
         desc: "Condiciones, zonas y canales de notificación.", icon: IconAlertRule,
-        stat: () => "3 activas",
+        stat: () => "Pendiente de backend",
       },
       {
         to: "/alertas", label: "Centro de alertas", permission: "alertas", status: "Con datos",
         desc: "Seguimiento de envío, reintentos y entregas.", icon: IconAlertCenter,
-        stat: () => `${mockAlerts.filter((a) => a.status === "failed").length} fallidas`,
+        stat: () => "Pendiente de backend",
       },
     ],
   },
@@ -154,13 +157,13 @@ const TILE_GROUPS: TileGroup[] = [
     items: [
       {
         to: "/fuentes-datos", label: "Fuentes de datos", permission: "fuentes", status: "Con datos",
-        desc: "Estado y sincronización del proveedor (IGP).", icon: IconSource,
-        stat: () => `${mockSources.filter((s) => s.status === "online").length} / ${mockSources.length} operativa`,
+        desc: "Estado y sincronización del proveedor.", icon: IconSource,
+        stat: (ctx) => (ctx.fuente ? `${ctx.fuente.habilitadas} / ${ctx.fuente.total} operativa` : "—"),
       },
       {
         to: "/reportes", label: "Reportes", permission: "reportes", status: "Con datos",
         desc: "Informes operativos y analíticos exportables.", icon: IconReport,
-        stat: () => "12 generados",
+        stat: (ctx) => (ctx.reportes != null ? `${ctx.reportes} informes` : "—"),
       },
     ],
   },
@@ -170,7 +173,7 @@ const TILE_GROUPS: TileGroup[] = [
       {
         to: "/usuarios", label: "Usuarios y roles", permission: "usuarios", status: "Con datos",
         desc: "Cuentas, roles y permisos de acceso.", icon: IconUsers,
-        stat: () => `${mockUsers.length} usuarios`,
+        stat: (ctx) => (ctx.usuarios != null ? `${ctx.usuarios} usuarios` : "—"),
       },
       {
         to: "/auditoria", label: "Auditoría", permission: "auditoria", status: "Con datos",
@@ -187,13 +190,23 @@ const TILE_GROUPS: TileGroup[] = [
 ];
 
 /* ── KPI (sin iconos, como el prototipo) ─────────────── */
-function Kpi({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="auth-surface tilt bg-surface border border-border rounded-[10px] px-3.5 py-3">
-      <small className="block text-[10px] uppercase tracking-[0.04em] text-content-muted">{label}</small>
+function Kpi({ label, value, hint, onClick }: { label: string; value: string; hint: string; onClick?: () => void }) {
+  const contenido = (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <small className="block text-[10px] uppercase tracking-[0.04em] text-content-muted">{label}</small>
+      </div>
       <b className="block text-[24px] font-bold leading-tight text-content">{value}</b>
       <span className="text-[11px] text-content-muted">{hint}</span>
-    </div>
+    </>
+  );
+  const clases =
+    "auth-surface tilt bg-surface border border-border rounded-[10px] px-3.5 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md";
+  if (!onClick) return <div className={clases}>{contenido}</div>;
+  return (
+    <button type="button" onClick={onClick} className={clases} title="Ver cómo se calcula">
+      {contenido}
+    </button>
   );
 }
 
@@ -219,7 +232,7 @@ function AnalyticCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="auth-surface tilt bg-surface border border-border rounded-xl flex flex-col overflow-hidden min-w-0">
+    <section className="auth-surface tilt bg-surface border border-border rounded-xl flex flex-col overflow-hidden min-w-0 transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md">
       <div className="flex items-start justify-between gap-2 px-3 pt-3">
         <div>
           <b className="block text-[13px] font-semibold text-content">{title}</b>
@@ -245,15 +258,15 @@ function AnalyticCard({
 
 /* ── Tarjeta de módulo ──────────────────────────────── */
 function ModuleCard({
-  to, label, desc, status, stat, icon: Icon, events,
+  to, label, desc, status, stat, icon: Icon, ctx,
 }: {
   to: string;
   label: string;
   desc: string;
   status: ModuleStatus;
-  stat: (events: SeismicEvent[]) => string;
+  stat: (ctx: TileCtx) => string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  events: SeismicEvent[];
+  ctx: TileCtx;
 }) {
   return (
     <Link
@@ -272,7 +285,7 @@ function ModuleCard({
         <p className="mt-0.5 text-[12px] leading-snug text-content-muted min-h-[34px] line-clamp-2">{desc}</p>
       </div>
       <div className="flex items-center justify-between border-t border-border pt-2 text-[12px]">
-        <em className="not-italic text-content-muted">{stat(events)}</em>
+        <em className="not-italic text-content-muted">{stat(ctx)}</em>
         <span className="text-base text-accent-600 transition-transform group-hover:translate-x-0.5" aria-hidden="true">
           →
         </span>
@@ -285,6 +298,7 @@ function ModuleCard({
 export default function DashboardPage() {
   const [params, setParams] = useSearchParams();
   const { user, canAccess } = useAuth();
+  const { data, cargando, error, recargar } = useDashboardData();
 
   /* Filtros globales (periodo / zona / magnitud mínima) — los fija la barra de filtros */
   const periodo = params.get("periodo") ?? DEFAULT_PERIOD;
@@ -324,8 +338,8 @@ export default function DashboardPage() {
   const clearFilters = () => setParams(new URLSearchParams(), { replace: true });
 
   const baseFiltered = useMemo(
-    () => filterEvents(mockEvents, { periodo, desde, hasta, zona }),
-    [periodo, desde, hasta, zona],
+    () => filterEvents(data.eventos ?? [], { periodo, desde, hasta, zona }),
+    [data.eventos, periodo, desde, hasta, zona],
   );
   const filtered = useMemo(
     () => (magmin > 0 ? baseFiltered.filter((e) => e.magnitude >= magmin) : baseFiltered),
@@ -337,10 +351,10 @@ export default function DashboardPage() {
 
   const maxEv = useMemo(() => maxMagnitudeEvent(filtered), [filtered]);
   const medDepth = useMemo(() => medianDepth(filtered), [filtered]);
-  const onlineSources = mockSources.filter((s) => s.status === "online").length;
-  const seismicActive = mockAlerts.filter(
-    (a) => a.kind === "seismic" && a.status === "pending" && inPeriod(a.createdAt, { periodo, desde, hasta, zona }),
-  ).length;
+  const avgDepth = useMemo(() => meanDepth(filtered), [filtered]);
+  const onlineSources = data.fuente?.habilitadas ?? null;
+  const totalSources = data.fuente?.total ?? null;
+  const seismicActive = data.resumen?.active_alerts ?? null;
 
   const pLabel = periodLabel(periodo, desde, hasta);
   const zonaName = zona ? REGION_OPTIONS.find((r) => r.slug === zona)?.name ?? zona : "";
@@ -381,12 +395,12 @@ export default function DashboardPage() {
 
   /* ── Estado de los modales ─────────────────────────── */
   const [expanded, setExpanded] = useState<ModalKind | null>(null);
+  const [calidadOpen, setCalidadOpen] = useState(false);
+  const calidad = useCalidadDatos();
   const [mf, setMf] = useState<ModalFilters>({
     periodo: DEFAULT_PERIOD, desde: "", hasta: "", zona: "", magmin: 0,
   });
   const [gran, setGran] = useState<TimeGranularity>("day");
-  const [selProv, setSelProv] = useState<string | null>(null);
-  const [zoneCard, setZoneCard] = useState(false);
   const [tableRows, setTableRows] = useState(10);
   const [tableOldestFirst, setTableOldestFirst] = useState(false);
   const [tableMode, setTableMode] = useState<"eventos" | "barra">("eventos");
@@ -394,6 +408,54 @@ export default function DashboardPage() {
   const [copiedOk, setCopiedOk] = useState(false);
   const [tabGroup, setTabGroup] = useState(0);
   const groupTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  /* Redimensionado interno de la vista ampliada: ancho del panel del mapa y alto de la tabla */
+  const [anchoMapa, setAnchoMapa] = useState(420);
+  const [arrastrandoMapa, setArrastrandoMapa] = useState(false);
+  const [altoTabla, setAltoTabla] = useState(320);
+  const [arrastrandoTabla, setArrastrandoTabla] = useState(false);
+
+  /** Arrastra el divisor vertical: ajusta el ancho del panel de provincias/regiones. */
+  const dividirMapa = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const iniX = e.clientX;
+    const iniW = anchoMapa;
+    setArrastrandoMapa(true);
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    const mover = (ev: PointerEvent) => {
+      setAnchoMapa(Math.min(Math.max(iniW - (ev.clientX - iniX), 260), 760));
+    };
+    const soltar = () => {
+      setArrastrandoMapa(false);
+      document.body.style.userSelect = prevSelect;
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  };
+
+  /** Arrastra el divisor horizontal: ajusta el alto de la tabla de datos. */
+  const dividirTabla = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const iniY = e.clientY;
+    const iniH = altoTabla;
+    setArrastrandoTabla(true);
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    const mover = (ev: PointerEvent) => {
+      setAltoTabla(Math.min(Math.max(iniH - (ev.clientY - iniY), 120), 780));
+    };
+    const soltar = () => {
+      setArrastrandoTabla(false);
+      document.body.style.userSelect = prevSelect;
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  };
 
   /* Grupos de módulos visibles según permisos */
   const visibleGroups = useMemo(
@@ -422,32 +484,18 @@ export default function DashboardPage() {
   const openModal = (kind: ModalKind) => {
     setMf({ periodo, desde, hasta, zona, magmin });
     setTablePage(0);
-    setSelProv(null);
-    setZoneCard(false);
     setExpanded(kind);
   };
 
   const patchMf = (patch: Partial<ModalFilters>) => {
-    if (patch.zona !== undefined) setSelProv(null);
-    setZoneCard(false);
     setMf((f) => ({ ...f, ...patch }));
     setTablePage(0);
   };
 
-  /**
-   * Selecciona una provincia. `openCard` = viene del mapa, del punto rojo o de la tabla
-   * (abre la ficha de zonas y alterna al repetir el clic); el buscador solo resalta.
-   */
-  const pickProvince = (name: string, openCard: boolean) => {
-    const sameOpen = selProv === name && zoneCard;
-    setSelProv(sameOpen ? null : name);
-    setZoneCard(sameOpen ? false : openCard);
-  };
-
   /* Datos del modal (filtros propios) */
   const mBase = useMemo(
-    () => filterEvents(mockEvents, { periodo: mf.periodo, desde: mf.desde, hasta: mf.hasta, zona: mf.zona }),
-    [mf],
+    () => filterEvents(data.eventos ?? [], { periodo: mf.periodo, desde: mf.desde, hasta: mf.hasta, zona: mf.zona }),
+    [data.eventos, mf],
   );
   const mEvents = useMemo(
     () => (mf.magmin > 0 ? mBase.filter((e) => e.magnitude >= mf.magmin) : mBase),
@@ -516,31 +564,6 @@ export default function DashboardPage() {
     return { rows, total: mBase.length };
   }, [mBase]);
 
-  /* Provincias de la región seleccionada en el modal del mapa */
-  const regionEvents = useMemo(
-    () => (mf.zona ? mBase.filter((e) => slugify(e.region) === mf.zona) : []),
-    [mBase, mf.zona],
-  );
-  const provStats = useMemo(() => {
-    if (!mf.zona) return [];
-    const maxMag = regionEvents.reduce((a, e) => Math.max(a, e.magnitude), 0);
-    return provinceStats(mf.zona, regionEvents.length, maxMag);
-  }, [mf.zona, regionEvents]);
-  const selStat = provStats.find((p) => p.name === selProv) ?? null;
-  const selDistricts = selStat ? provinceDistricts(mf.zona, selStat.name, selStat.n, selStat.mx) : [];
-  const regionTotal = regionEvents.length;
-  const regionMax = regionEvents.reduce((a, e) => Math.max(a, e.magnitude), 0);
-
-  /* Eventos por región para la vista previa del mapa en el dashboard */
-  const regionCounts = useMemo(() => {
-    const out: Record<string, number> = {};
-    filtered.forEach((e) => {
-      const s = slugify(e.region);
-      out[s] = (out[s] ?? 0) + 1;
-    });
-    return out;
-  }, [filtered]);
-
   /* Enlace compartible / querystring de módulos con los filtros del modal */
   const modalQs = () => {
     const p = new URLSearchParams();
@@ -583,22 +606,11 @@ export default function DashboardPage() {
         : "Vista ampliada — Mapa de eventos (verificación por región)";
 
   const modalModule = expanded === "dist" ? "Análisis estadístico" : expanded === "mapa" ? "Mapa sísmico" : "Eventos sísmicos";
-  const modalModuleTo = expanded === "dist" ? "/analisis" : expanded === "mapa" ? "/mapa" : "/eventos";
+  const modalModuleTo = expanded === "dist" ? "/analisis" : expanded === "mapa" ? "/mapa-sismico" : "/eventos";
 
   const handleCsv = () => {
     if (expanded === "mapa") {
-      const lines =
-        mf.zona && provStats.length > 0
-          ? ["region,provincia,eventos,pct,mag_max", ...provStats.map((p) =>
-              [
-                mZonaName,
-                p.name,
-                p.n,
-                regionTotal ? ((p.n / regionTotal) * 100).toFixed(1) : "0",
-                p.n ? p.mx.toFixed(1) : "",
-              ].join(","),
-            )]
-          : ["region,eventos,mag_max", ...mapTable.rows.map((r) => [r.name, r.n, r.n ? r.mx.toFixed(1) : ""].join(","))];
+      const lines = ["region,eventos,mag_max", ...mapTable.rows.map((r) => [r.name, r.n, r.n ? r.mx.toFixed(1) : ""].join(","))];
       copyText(lines.join("\n")).then((ok) => {
         setCopiedOk(ok);
         if (ok) window.setTimeout(() => setCopiedOk(false), 2200);
@@ -643,13 +655,12 @@ export default function DashboardPage() {
 
   const modalFooter = (
     <span>
-      Fuente: {SRC} · Periodo: {mPLabel} · Filtros: {mZonaName || "Todo el Perú"}
-      {selStat ? ` · Provincia: ${selStat.name}` : ""}, mag ≥ {mf.magmin || "todas"} · n=
-      {expanded === "mapa" ? (mf.zona ? regionTotal : mapTable.total) : mEvents.length} · Catálogo: {DATA_RANGE_LABEL} · Act: {actTime} (UTC-5)
+      Fuente: {SRC} · Periodo: {mPLabel} · Filtros: {mZonaName || "Todo el Perú"}, mag ≥ {mf.magmin || "todas"} · n=
+      {expanded === "mapa" ? mapTable.total : mEvents.length} · Catálogo: {DATA_RANGE_LABEL} · Act: {actTime} (UTC-5)
     </span>
   );
 
-  /* Bienvenida: usuario y rol de la sesión (mock, sin backend) */
+  /* Bienvenida: usuario y rol de la sesión */
   const roleLabel = ROLE_LABELS[user?.role ?? "viewer"];
   const initials = (user?.fullName ?? "Invitado")
     .split(" ")
@@ -665,7 +676,7 @@ export default function DashboardPage() {
       {/* Bienvenida + rol */}
       <section
         aria-label="Sesión actual"
-        className="auth-surface tilt bg-surface border border-border rounded-[10px] px-5 py-4 flex flex-wrap items-center gap-4"
+        className="auth-surface tilt bg-surface border border-border rounded-[10px] px-5 py-4 flex flex-wrap items-center gap-4 transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md"
       >
         <span
           className="w-12 h-12 rounded-full bg-accent-600 text-white grid place-items-center text-sm font-bold shrink-0"
@@ -700,10 +711,27 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-base font-bold text-content">Resumen general</h2>
           <p className="text-xs text-content-muted mt-0.5">
-            Indicadores del periodo · datos de ejemplo (mock, sin backend)
+            Indicadores del periodo · datos reales de la API
           </p>
         </div>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-border border-l-2 border-l-rose-600 bg-surface px-3 py-2.5 text-xs text-content-secondary"
+        >
+          <IconInfo size={14} className="shrink-0 text-rose-600" />
+          <span>No se pudieron cargar los datos del dashboard{cargando ? "" : " (revisa la API)"}.</span>
+          <button
+            type="button"
+            onClick={recargar}
+            className="ml-auto rounded-md border border-border px-2.5 py-1 font-medium text-content transition-colors hover:bg-surface-secondary"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {/* Filtros globales */}
       <div role="group" aria-label="Filtros globales" className="auth-surface bg-surface border border-border rounded-[10px] px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -771,17 +799,37 @@ export default function DashboardPage() {
         <Kpi label="Eventos en periodo" value={filtered.length.toLocaleString("es-PE")} hint={`Periodo: ${pLabel}`} />
         <Kpi
           label="Magnitud máxima"
-          value={maxEv ? `${maxEv.magnitude.toFixed(1)} ${maxEv.magnitudeType}` : "—"}
+          value={maxEv ? `${maxEv.magnitude.toFixed(1)} ${maxEv.magnitudeType ?? "—"}` : "—"}
           hint="Tipo: Mw/ML mixto"
         />
         <Kpi label="Profundidad mediana" value={medDepth !== null ? `${medDepth} km` : "—"} hint="Del periodo filtrado" />
-        <Kpi label="Fuente operativa" value={`${onlineSources} / ${mockSources.length}`} hint={`${SRC} · latencia ${mockSources[0]?.latencyMs ?? 0} ms`} />
+        <Kpi label="Profundidad media" value={avgDepth !== null ? `${avgDepth} km` : "—"} hint="Del periodo filtrado" />
+        <Kpi
+          label="Fuente operativa"
+          value={onlineSources != null && totalSources != null ? `${onlineSources} / ${totalSources}` : "—"}
+          hint={data.fuente?.nombre ?? "Sin datos de fuente"}
+        />
         <Kpi
           label="Alertas sísmicas activas"
-          value={String(seismicActive)}
-          hint={seismicActive ? `${seismicActive} pendientes de envío` : "Sin alertas vigentes"}
+          value={seismicActive != null ? String(seismicActive) : "—"}
+          hint={
+            seismicActive != null
+              ? seismicActive > 0
+                ? `${seismicActive} pendientes de envío`
+                : "Sin alertas vigentes"
+              : "Pendiente de backend"
+          }
         />
-        <Kpi label="Calidad de datos" value="99.4%" hint="0.3% nulos · 0.3% duplicados" />
+        <Kpi
+          label="Calidad de datos"
+          value={calidad ? `${calidad.global.pct.toFixed(1)}%` : "—"}
+          hint={
+            calidad
+              ? `${calidad.global.pctNulos.toFixed(1)}% nulos · ${calidad.global.pctDuplicados == null ? "—" : `${calidad.global.pctDuplicados.toFixed(1)}%`} duplicados`
+              : "Calculando…"
+          }
+          onClick={() => setCalidadOpen(true)}
+        />
       </div>
 
       {/* Análisis del periodo */}
@@ -810,7 +858,7 @@ export default function DashboardPage() {
         <AnalyticCard
           title="Mapa de eventos"
           moduleLabel="Mapa sísmico"
-          to="/mapa"
+          to="/mapa-sismico"
           onOpen={() => openModal("mapa")}
           footer={
             <span>
@@ -818,8 +866,10 @@ export default function DashboardPage() {
             </span>
           }
         >
-          <div className="w-full h-[300px]">
-            <RegionMap preview regionCounts={regionCounts} />
+          <div className="chart-plot flex h-[300px] items-center justify-center rounded-lg px-4 text-center">
+            <p className="text-xs text-content-muted">
+              Capa base pendiente · el mapa se mostrará cuando exista el GeoJSON oficial de regiones.
+            </p>
           </div>
         </AnalyticCard>
       </div>
@@ -898,7 +948,7 @@ export default function DashboardPage() {
                       status={item.status}
                       stat={item.stat}
                       icon={item.icon}
-                      events={filtered}
+                      ctx={{ events: filtered, fuente: data.fuente, usuarios: data.usuarios, reportes: data.reportes }}
                     />
                   ))}
                 </div>
@@ -910,9 +960,12 @@ export default function DashboardPage() {
 
       {/* Vistas ampliadas */}
       {expanded && (
-        <ExpandModal title={modalTitle} onClose={() => setExpanded(null)} footer={modalFooter}>
+        <ExpandModal title={modalTitle} onClose={() => setExpanded(null)} footer={modalFooter} resizable>
           {(m) => (
-          <div className={m.full ? "h-full min-h-0 flex flex-col gap-3" : "space-y-3"}>
+          <div
+            className={m.full ? "h-full min-h-0 flex flex-col gap-3" : "space-y-3"}
+            style={{ ["--map-w" as string]: `${anchoMapa}px` } as CSSProperties}
+          >
             {/* Filtros propios del gráfico */}
             <div className="shrink-0 auth-surface bg-surface border border-border rounded-lg px-2.5 py-2 flex flex-wrap items-end gap-x-3 gap-y-2">
               <div className="flex flex-col gap-1 text-[12px] text-content-muted">
@@ -971,29 +1024,6 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {expanded === "mapa" && (
-                <div className="flex flex-col gap-1 text-[12px] text-content-muted">
-                  <label>Provincia</label>
-                  <Combobox
-                    ariaLabel="Buscar provincia"
-                    placeholder="Escribe una provincia…"
-                    value={selProv ?? ""}
-                    options={PROVINCE_OPTIONS}
-                    onChange={(name) => {
-                      const p = findProvince(name);
-                      if (!p) {
-                        patchMf({ zona: "" });
-                        return;
-                      }
-                      if (p.deptSlug !== mf.zona) patchMf({ zona: p.deptSlug });
-                      pickProvince(p.name, false);
-                    }}
-                    emptyText="Sin provincias con ese nombre"
-                    className="w-56"
-                  />
-                </div>
-              )}
-
               <div className="flex flex-col gap-1 text-[12px] text-content-muted">
                 <label>Magnitud mínima</label>
                 <select value={mf.magmin} onChange={(e) => patchMf({ magmin: Number(e.target.value) })} className={inputCls} aria-label="Magnitud mínima">
@@ -1031,17 +1061,12 @@ export default function DashboardPage() {
                 {mZonaName && (
                   <span className="px-2.5 py-0.5 text-[12px] rounded-xl bg-surface border border-border text-content-secondary">{mZonaName}</span>
                 )}
-                {selStat && (
-                  <span className="px-2.5 py-0.5 text-[12px] rounded-xl border border-accent-600 bg-surface text-accent-600">
-                    Provincia: {selStat.name}
-                  </span>
-                )}
                 {mf.magmin > 0 && (
                   <span className="px-2.5 py-0.5 text-[12px] rounded-xl bg-surface border border-border text-content-secondary">mag ≥ {mf.magmin}</span>
                 )}
                 <button
                   type="button"
-                  onClick={() => { setMf({ periodo, desde, hasta, zona, magmin }); setSelProv(null); }}
+                  onClick={() => setMf({ periodo, desde, hasta, zona, magmin })}
                   className="ml-auto px-3 py-1 text-xs border border-border rounded-md text-content-secondary hover:bg-surface transition-colors"
                 >
                   Restablecer
@@ -1110,213 +1135,111 @@ export default function DashboardPage() {
 
             {expanded === "mapa" && (
               <div className={m.full ? "relative flex-1 min-h-0" : "relative"}>
-                <div className={m.full ? "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-3.5 h-full" : "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] gap-3.5"}>
-                  <RegionMap
-                    regionSlug={mf.zona}
-                    regionName={mZonaName}
-                    provinces={provStats}
-                    selProv={selProv}
-                    onSelectProv={(name) => pickProvince(name, true)}
-                    onSelectRegion={(slug) => patchMf({ zona: slug })}
-                    onReset={() => patchMf({ zona: "" })}
-                    maxTotal={regionTotal}
+                <div className={m.full ? "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--map-w))] gap-3.5 h-full" : "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--map-w))] gap-3.5"}>
+                  {/* Capa base pendiente: sin GeoJSON oficial no se dibuja geografía */}
+                  <div className={`chart-plot flex min-h-[300px] items-center justify-center rounded-lg px-6 text-center ${m.full ? "h-full" : ""}`}>
+                    <div>
+                      <p className="text-sm font-semibold text-content">Capa base pendiente</p>
+                      <p className="mt-1 text-xs text-content-muted">
+                        El mapa se mostrará cuando exista el GeoJSON oficial de regiones. No se dibuja geografía aproximada.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Divisor arrastrable: ajusta el ancho del panel de regiones */}
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Ajustar el ancho del panel de regiones"
+                    tabIndex={0}
+                    onPointerDown={dividirMapa}
+                    onDoubleClick={() => setAnchoMapa(420)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        setAnchoMapa((w) => Math.min(w + 24, 760));
+                      } else if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        setAnchoMapa((w) => Math.max(w - 24, 260));
+                      }
+                    }}
+                    title="Arrastra para ajustar el ancho del panel (doble clic restablece)"
+                    className={`hidden lg:block w-1.5 shrink-0 cursor-col-resize touch-none rounded-full transition-colors focus:outline-none ${
+                      arrastrandoMapa ? "bg-accent-500" : "bg-border hover:bg-accent-500 focus-visible:bg-accent-500"
+                    }`}
                   />
 
                   <div className={m.full ? "min-h-0 flex flex-col" : ""}>
-                    {mf.zona ? (
-                      <>
-                        <div className={m.full ? "chart-plot flex-1 min-h-0 overflow-auto rounded-lg" : "chart-plot overflow-auto rounded-lg max-h-[420px]"}>
-                          <table className="w-full text-xs">
-                            <thead className="sticky top-0 bg-surface-tertiary z-10">
-                              <tr className="text-left text-content-muted">
-                                <th className="px-3 py-1.5 font-medium">Provincia</th>
-                                <th className="px-3 py-1.5 font-medium text-right">Eventos</th>
-                                <th className="px-3 py-1.5 font-medium text-right">%</th>
-                                <th className="px-3 py-1.5 font-medium text-right">Mag. máx.</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {provStats.map((p) => (
-                                <tr
-                                  key={p.name}
-                                  onClick={() => pickProvince(p.name, true)}
-                                  className={`border-b border-border last:border-0 cursor-pointer hover:bg-surface-tertiary ${
-                                    selProv === p.name ? "bg-surface-tertiary font-bold" : ""
-                                  }`}
-                                  title={`Ver zonas afectadas de ${p.name}`}
-                                >
-                                  <td className="px-3 py-1.5 text-content">{p.name}</td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">{p.n}</td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">
-                                    {regionTotal ? `${((p.n / regionTotal) * 100).toFixed(1)}%` : "—"}
-                                  </td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">{p.n ? p.mx.toFixed(1) : "—"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="font-bold bg-surface-tertiary">
-                                <td className="px-3 py-1.5 text-content">{mZonaName || "Región"}</td>
-                                <td className="px-3 py-1.5 text-right text-content">{regionTotal}</td>
-                                <td className="px-3 py-1.5 text-right text-content">100%</td>
-                                <td className="px-3 py-1.5 text-right text-content">{regionMax ? regionMax.toFixed(1) : "—"}</td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                        <p className="mt-1.5 shrink-0 text-[11px] text-content-muted">
-                          {provStats.length} provincias de {mZonaName} suman n={regionTotal}. Clic en una provincia o en su punto rojo para ver las zonas afectadas.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className={m.full ? "chart-plot flex-1 min-h-0 overflow-auto rounded-lg" : "chart-plot overflow-auto rounded-lg max-h-[420px]"}>
-                          <table className="w-full text-xs">
-                            <thead className="sticky top-0 bg-surface-tertiary z-10">
-                              <tr className="text-left text-content-muted">
-                                <th className="px-3 py-1.5 font-medium">Región</th>
-                                <th className="px-3 py-1.5 font-medium text-right">Eventos</th>
-                                <th className="px-3 py-1.5 font-medium text-right">%</th>
-                                <th className="px-3 py-1.5 font-medium text-right">Mag. máx.</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {mapTable.rows.map((r) => (
-                                <tr
-                                  key={r.slug}
-                                  onClick={() => patchMf({ zona: mf.zona === r.slug ? "" : r.slug })}
-                                  className={`border-b border-border last:border-0 cursor-pointer hover:bg-surface-tertiary ${
-                                    mf.zona === r.slug ? "bg-surface-tertiary font-bold" : ""
-                                  }`}
-                                  title={`Acercar el mapa a ${r.name}`}
-                                >
-                                  <td className="px-3 py-1.5 text-content">{r.name}</td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">{r.n}</td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">
-                                    {mapTable.total ? `${((r.n / mapTable.total) * 100).toFixed(1)}%` : "—"}
-                                  </td>
-                                  <td className="px-3 py-1.5 text-right text-content-secondary">{r.n ? r.mx.toFixed(1) : "—"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="font-bold bg-surface-tertiary">
-                                <td className="px-3 py-1.5 text-content">Total</td>
-                                <td className="px-3 py-1.5 text-right text-content">{mapTable.total}</td>
-                                <td className="px-3 py-1.5 text-right text-content">100%</td>
-                                <td />
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                        <p className="mt-1.5 shrink-0 text-[11px] text-content-muted">
-                          Las {REGION_OPTIONS.length} regiones suman n={mapTable.total}. Clic en una región para ver sus provincias y ubicaciones.
-                        </p>
-                      </>
-                    )}
+                    <div className={m.full ? "chart-plot flex-1 min-h-0 overflow-auto rounded-lg" : "chart-plot overflow-auto rounded-lg max-h-[420px]"}>
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 bg-surface-tertiary z-10">
+                          <tr className="text-left text-content-muted">
+                            <th className="px-3 py-1.5 font-medium">Región</th>
+                            <th className="px-3 py-1.5 font-medium text-right">Eventos</th>
+                            <th className="px-3 py-1.5 font-medium text-right">%</th>
+                            <th className="px-3 py-1.5 font-medium text-right">Mag. máx.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mapTable.rows.map((r) => (
+                            <tr
+                              key={r.slug}
+                              onClick={() => patchMf({ zona: mf.zona === r.slug ? "" : r.slug })}
+                              className={`border-b border-border last:border-0 cursor-pointer hover:bg-surface-tertiary ${
+                                mf.zona === r.slug ? "bg-surface-tertiary font-bold" : ""
+                              }`}
+                              title={`Filtrar por ${r.name}`}
+                            >
+                              <td className="px-3 py-1.5 text-content">{r.name}</td>
+                              <td className="px-3 py-1.5 text-right text-content-secondary">{r.n}</td>
+                              <td className="px-3 py-1.5 text-right text-content-secondary">
+                                {mapTable.total ? `${((r.n / mapTable.total) * 100).toFixed(1)}%` : "—"}
+                              </td>
+                              <td className="px-3 py-1.5 text-right text-content-secondary">{r.n ? r.mx.toFixed(1) : "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="font-bold bg-surface-tertiary">
+                            <td className="px-3 py-1.5 text-content">Total</td>
+                            <td className="px-3 py-1.5 text-right text-content">{mapTable.total}</td>
+                            <td className="px-3 py-1.5 text-right text-content">100%</td>
+                            <td />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                    <p className="mt-1.5 shrink-0 text-[11px] text-content-muted">
+                      Las {REGION_OPTIONS.length} regiones suman n={mapTable.total}. Las regiones son solo nombres: no hay provincias ni contornos inventados.
+                    </p>
                   </div>
                 </div>
-
-                {/* Ficha centrada: ubicación + zonas afectadas */}
-                {selStat && zoneCard && (
-                  <div className="fixed inset-0 z-[110] grid place-items-center p-4">
-                    <div
-                      className="absolute inset-0 bg-black/45"
-                      onClick={() => setZoneCard(false)}
-                      aria-hidden="true"
-                    />
-                    <div
-                      role="dialog"
-                      aria-modal="true"
-                      aria-label={`Zonas afectadas en ${selStat.name}, ${mZonaName}`}
-                      className="auth-surface relative border border-border rounded-xl shadow-2xl w-full max-w-xl max-h-[86vh] flex flex-col"
-                    >
-                      <div className="flex items-start justify-between gap-3 px-5 py-3 border-b border-border shrink-0">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-widest text-content-muted">
-                            Provincia de {mZonaName}
-                          </p>
-                          <h3 className="text-base font-bold text-content flex items-center gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ background: "var(--danger)" }}
-                              aria-hidden="true"
-                            />
-                            {selStat.name}
-                          </h3>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setZoneCard(false)}
-                          className="p-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-tertiary transition-colors"
-                          aria-label="Cerrar ficha de la provincia"
-                        >
-                          ×
-                        </button>
-                      </div>
-
-                      <div className="px-5 py-3 border-b border-border grid grid-cols-3 gap-2 text-center shrink-0">
-                        <div>
-                          <p className="text-[11px] text-content-muted">Eventos</p>
-                          <p className="text-lg font-bold text-content">{selStat.n}</p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] text-content-muted">Mag. máx.</p>
-                          <p className="text-lg font-bold text-content">{selStat.mx ? selStat.mx.toFixed(1) : "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] text-content-muted">% de {mZonaName}</p>
-                          <p className="text-lg font-bold text-content">
-                            {regionTotal ? `${((selStat.n / regionTotal) * 100).toFixed(1)}%` : "—"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto px-5 py-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold text-content">
-                            Zonas afectadas ({selDistricts.length})
-                          </h4>
-                          <span className="text-[11px] text-content-muted">distritos, ordenados por eventos</span>
-                        </div>
-                        {selDistricts.length === 0 ? (
-                          <p className="text-xs text-content-muted py-6 text-center">
-                            Sin zonas afectadas en el periodo seleccionado (0 eventos en esta provincia).
-                          </p>
-                        ) : (
-                          <ul className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                            {selDistricts.map((d) => (
-                              <li key={d.name} className="flex items-center gap-3 px-3 py-2 text-xs">
-                                <span className="text-content">{d.name}</span>
-                                <span className="ml-auto text-content-secondary">{d.n} eventos</span>
-                                <span className="w-16 text-right text-content-secondary">
-                                  {d.mx ? `mag ${d.mx.toFixed(1)}` : "—"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        <p className="mt-2 text-[11px] text-content-muted">
-                          Distritos simulados (frontend) para la demostración · Periodo: {mPLabel} · Fuente: {SRC}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-surface-secondary rounded-b-xl shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => patchMf({ zona: "" })}
-                          className={miniBtn}
-                        >
-                          Ver todo el Perú
-                        </button>
-                        <button type="button" onClick={() => setZoneCard(false)} className={miniBtn}>
-                          Cerrar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
+
+            {/* Divisor arrastrable: ajusta el alto de la tabla de datos */}
+            {expanded !== "mapa" && (
+              <div
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Ajustar el alto de la tabla de datos"
+                tabIndex={0}
+                onPointerDown={dividirTabla}
+                onDoubleClick={() => setAltoTabla(320)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setAltoTabla((h) => Math.min(h + 24, 780));
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setAltoTabla((h) => Math.max(h - 24, 120));
+                }
+              }}
+              title="Arrastra para ajustar el alto de la tabla (doble clic restablece)"
+              className={`hidden lg:block h-1.5 shrink-0 cursor-row-resize touch-none rounded-full transition-colors focus:outline-none ${
+                arrastrandoTabla ? "bg-accent-500" : "bg-border hover:bg-accent-500 focus-visible:bg-accent-500"
+              }`}
+            />
             )}
 
             {/* Tabla de datos (solo gráficos) */}
@@ -1326,7 +1249,14 @@ export default function DashboardPage() {
                   <b className="font-semibold text-content">
                     Tabla de datos — {tableMode === "barra" ? "por barra del gráfico" : "eventos del gráfico"}
                   </b>
-                  <span>{totalRows} filas · mostrando {Math.min(tableRows, Math.max(0, totalRows - pageStart))}</span>
+                  <span>{totalRows} filas</span>
+                  {tableMode === "barra" && (
+                    <span>
+                      {barSum === mEvents.length
+                        ? `✓ La suma coincide con n=${mEvents.length}`
+                        : `✗ La suma (${barSum}) no coincide con n=${mEvents.length}`}
+                    </span>
+                  )}
                   <span className="flex-1" />
 
                   <div className="flex items-center rounded-md border border-border overflow-hidden">
@@ -1362,9 +1292,19 @@ export default function DashboardPage() {
                       </button>
                     </div>
                   )}
+
+                  <span>
+                    {totalRows ? pageStart + 1 : 0}–{Math.min(totalRows, pageStart + tableRows)} de {totalRows}
+                  </span>
+                  <button type="button" onClick={() => setTablePage((p) => Math.max(0, p - 1))} disabled={page === 0} className={miniBtn} aria-label="Página anterior">
+                    ◀
+                  </button>
+                  <button type="button" onClick={() => setTablePage((p) => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1} className={miniBtn} aria-label="Página siguiente">
+                    ▶
+                  </button>
                 </div>
 
-                <div className="overflow-auto max-h-[320px]">
+                <div className="overflow-auto" style={{ maxHeight: altoTabla }}>
                   {tableMode === "barra" ? (
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-surface z-10">
@@ -1422,9 +1362,9 @@ export default function DashboardPage() {
                               </td>
                               <td className="px-3 py-1.5 text-content">{e.place}</td>
                               <td className="px-3 py-1.5 text-right whitespace-nowrap font-bold text-content">
-                                {e.magnitude.toFixed(1)} {e.magnitudeType}
+                                {e.magnitude.toFixed(1)} {e.magnitudeType ?? "—"}
                               </td>
-                              <td className="px-3 py-1.5 text-right whitespace-nowrap text-content-secondary">{e.depthKm} km</td>
+                              <td className="px-3 py-1.5 text-right whitespace-nowrap text-content-secondary">{e.depthKm ?? "—"} km</td>
                               <td className="px-3 py-1.5 text-content-secondary">{e.sourceName}</td>
                             </tr>
                           ))
@@ -1433,29 +1373,65 @@ export default function DashboardPage() {
                     </table>
                   )}
                 </div>
-
-                <div className="flex items-center gap-2 justify-end mt-1.5 text-[11px] text-content-muted">
-                  {tableMode === "barra" && (
-                    <span className="mr-auto">
-                      {barSum === mEvents.length
-                        ? `✓ La suma coincide con n=${mEvents.length}`
-                        : `✗ La suma (${barSum}) no coincide con n=${mEvents.length}`}
-                    </span>
-                  )}
-                  <span>
-                    {totalRows ? pageStart + 1 : 0}–{Math.min(totalRows, pageStart + tableRows)} de {totalRows}
-                  </span>
-                  <button type="button" onClick={() => setTablePage((p) => Math.max(0, p - 1))} disabled={page === 0} className={miniBtn} aria-label="Página anterior">
-                    ◀
-                  </button>
-                  <button type="button" onClick={() => setTablePage((p) => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1} className={miniBtn} aria-label="Página siguiente">
-                    ▶
-                  </button>
-                </div>
               </div>
             )}
           </div>
           )}
+        </ExpandModal>
+      )}
+
+      {calidadOpen && (
+        <ExpandModal title="Calidad de datos" onClose={() => setCalidadOpen(false)}>
+          <div className="space-y-3 text-[12px] leading-relaxed text-content-secondary">
+            <p>
+              El indicador se calcula con la misma función y la misma selección que la tabla de calidad de{" "}
+              <Link to="/fuentes-datos" className="text-accent-600 hover:underline">Fuentes de datos</Link>: el catálogo de eventos
+              recibidos de la fuente.
+            </p>
+            <div className="rounded-lg border border-border bg-surface p-3">
+              <p className="font-mono text-[11px] text-content">
+                % nulos = Σ campos nulos ÷ (eventos × campos) <br />
+                % duplicados = Σ duplicados omitidos ÷ Σ registros leídos <br />
+                calidad = 100 − % nulos − % duplicados
+              </p>
+            </div>
+            {calidad ? (
+              <>
+                <ul className="grid gap-1">
+                  <li>Eventos de la selección: <b className="text-content">{calidad.global.totalEventos}</b></li>
+                  <li>Nulos en todos los campos: <b className="text-content">{calidad.global.pctNulos.toFixed(1)}%</b></li>
+                  <li>
+                    Duplicados omitidos:{" "}
+                    <b className="text-content">{calidad.global.pctDuplicados == null ? "—" : `${calidad.global.pctDuplicados.toFixed(1)}%`}</b>
+                    {calidad.global.pctDuplicados == null ? " (sin base para calcularlo)" : ""}
+                  </li>
+                  <li>Calidad resultante: <b className="text-content">{calidad.global.pct.toFixed(1)}%</b></li>
+                </ul>
+                <table className="w-full border-collapse text-[11px]">
+                  <thead>
+                    <tr className="text-left text-content-muted">
+                      <th className="py-1 pr-3 font-medium">Campo</th>
+                      <th className="py-1 pr-3 font-medium">Nulos</th>
+                      <th className="py-1 font-medium">% nulos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calidad.campos.map((c) => (
+                      <tr key={c.campo} className="border-t border-border">
+                        <td className="py-1 pr-3 font-mono text-content">{c.campo}</td>
+                        <td className="py-1 pr-3 tabular-nums">
+                          {c.nulos} de {c.total}
+                        </td>
+                        <td className="py-1 tabular-nums">{c.pctNulos.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <p>Calculando…</p>
+            )}
+          </div>
         </ExpandModal>
       )}
     </div>

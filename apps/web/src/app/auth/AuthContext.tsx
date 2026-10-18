@@ -1,106 +1,109 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { User, LoginData, RegisterData } from "@/types/auth";
 import { ROLE_PERMISSIONS } from "@/types/auth";
-import { mockUsers } from "@/lib/mock/data";
+import { ApiError } from "@/lib/api";
+import { loginApi, registerApi, logoutApi, meApi } from "@/app/auth/auth.api";
+
+interface AuthResult {
+  success: boolean;
+  error?: string;
+}
 
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
-  login: (data: LoginData) => { success: boolean; error?: string };
-  register: (data: RegisterData) => { success: boolean; error?: string };
-  logout: () => void;
+  /** true mientras se intenta recuperar la sesión de la API al arrancar. */
+  loading: boolean;
+  login: (data: LoginData) => Promise<AuthResult>;
+  register: (data: RegisterData) => Promise<AuthResult>;
+  logout: () => Promise<void>;
   canAccess: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "sismo_auth_user";
-const REGISTERED_KEY = "sismo_registered_users";
-
-function loadStoredUser(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
-}
-
-function loadRegisteredUsers(): (User & { password: string })[] {
-  try {
-    const raw = sessionStorage.getItem(REGISTERED_KEY);
-    return raw ? (JSON.parse(raw) as (User & { password: string })[]) : [];
-  } catch {
-    return [];
-  }
+/** Traduce el fallo de la API a un mensaje comprensible para el usuario. */
+function mensajeDeError(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.detail || fallback;
+  return fallback;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => loadStoredUser());
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = useCallback((data: LoginData) => {
-    const registered = loadRegisteredUsers();
-    const allUsers = [...mockUsers, ...registered];
-    const found = allUsers.find(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase() && u.password === data.password
-    );
-
-    if (!found || found.status !== "active") {
-      return { success: false, error: "Credenciales incorrectas. Verifique su correo y contraseña." };
-    }
-
-    const { password: _, ...safeUser } = found;
-    const sessionUser: User = { ...safeUser, lastLoginAt: new Date().toISOString() };
-
-    if (data.remember) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-    } else {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sessionUser));
-    }
-    setUser(sessionUser);
-    return { success: true };
-  }, []);
-
-  const register = useCallback((data: RegisterData) => {
-    const registered = loadRegisteredUsers();
-    const exists = [...mockUsers, ...registered].some(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase()
-    );
-    if (exists) {
-      return { success: false, error: "Ya existe una cuenta con este correo." };
-    }
-
-    const newUser: User & { password: string } = {
-      id: `u-${Date.now()}`,
-      fullName: data.fullName,
-      email: data.email,
-      password: data.password,
-      role: "viewer",
-      status: "pending",
-      createdAt: new Date().toISOString(),
+  /* Recupera la sesión desde la cookie HttpOnly al arrancar. */
+  useEffect(() => {
+    let activo = true;
+    meApi()
+      .then((u) => {
+        if (activo) setUser(u);
+      })
+      .catch(() => {
+        /* sin sesión válida: se permanece desautenticado */
+      })
+      .finally(() => {
+        if (activo) setLoading(false);
+      });
+    return () => {
+      activo = false;
     };
-
-    registered.push(newUser);
-    sessionStorage.setItem(REGISTERED_KEY, JSON.stringify(registered));
-    return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(STORAGE_KEY);
+  const login = useCallback(async (data: LoginData): Promise<AuthResult> => {
+    try {
+      setUser(await loginApi(data));
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: mensajeDeError(
+          error,
+          "No se pudo iniciar sesión. Verifique su correo y contraseña.",
+        ),
+      };
+    }
+  }, []);
+
+  const register = useCallback(async (data: RegisterData): Promise<AuthResult> => {
+    try {
+      await registerApi(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: mensajeDeError(error, "No se pudo completar el registro.") };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutApi();
+    } catch {
+      /* aunque falle el backend, se limpia la sesión local */
+    }
     setUser(null);
   }, []);
 
   const canAccess = useCallback(
     (permission: string) => {
       if (!user) return false;
+      if (user.permissions) return user.permissions.includes(permission);
       return ROLE_PERMISSIONS[user.role]?.includes(permission) ?? false;
     },
     [user]
   );
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, canAccess }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        register,
+        logout,
+        canAccess,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

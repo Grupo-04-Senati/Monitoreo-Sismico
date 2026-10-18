@@ -39,8 +39,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 400));
-    const result = login({ email, password, remember, mfaCode });
+    const result = await login({ email, password, remember, mfaCode });
     setLoading(false);
     if (result.success) navigate("/", { replace: true });
     else setError(result.error ?? "Error al iniciar sesión.");
@@ -206,14 +205,10 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-
-          <p className="text-center text-xs mt-6" style={{ color: "#5D6F80" }}>
-            Cuentas de prueba: admin@sismo.pe / Admin123!
-          </p>
         </div>
       </div>
 
-      {/* ── Derecha: mapa ─────────────────────────────── */}
+      {/* ── Derecha: mapa del Perú (solo visual) ──────── */}
       <div
         className="hidden lg:flex w-1/2 items-center justify-center relative overflow-hidden"
         style={{ zIndex: 10 }}

@@ -11,9 +11,9 @@ interface CardProps {
 
 export default function Card({ title, help, action, footer, children, className = "" }: CardProps) {
   return (
-    <div className={`auth-surface tilt bg-surface border border-border rounded-lg shadow-sm flex flex-col ${className}`}>
+    <div className={`auth-surface tilt bg-surface border border-border rounded-lg shadow-sm flex flex-col transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             {title && <h3 className="font-semibold text-sm text-content">{title}</h3>}
             {help && <span className="text-xs text-content-muted cursor-help" title={help}>ⓘ</span>}

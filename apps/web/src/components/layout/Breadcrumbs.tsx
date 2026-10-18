@@ -8,7 +8,7 @@ interface Crumb {
 const CRUMB_MAP: Record<string, string> = {
   "/": "Dashboard",
   "/eventos": "Eventos",
-  "/mapa": "Mapa sísmico",
+  "/mapa-sismico": "Mapa sísmico",
   "/analisis": "Análisis estadístico",
   "/preparacion-datos": "Preparación de datos",
   "/modelos-ml": "Modelos ML",

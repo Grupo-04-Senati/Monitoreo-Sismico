@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/app/auth/AuthContext";
 import { RouteGuard } from "@/app/guards/RouteGuard";
@@ -5,6 +6,8 @@ import ForbiddenPage from "@/app/guards/ForbiddenPage";
 import LoginPage from "@/app/auth/LoginPage";
 import RegisterPage from "@/app/auth/RegisterPage";
 import ErpLayout from "@/components/layout/ErpLayout";
+import { apiGet } from "@/lib/api";
+import { aplicarMeta, type MetaInfo } from "@/lib/ancla";
 
 // Módulos
 import DashboardPage from "@/modules/dashboard/DashboardPage";
@@ -23,6 +26,27 @@ import AuditoriaPage from "@/modules/auditoria/AuditoriaPage";
 import ConfiguracionPage from "@/modules/configuracion/ConfiguracionPage";
 
 export default function App() {
+  const [metaListo, setMetaListo] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    apiGet<MetaInfo>("/meta")
+      .then((meta) => {
+        if (vivo) aplicarMeta(meta);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (vivo) setMetaListo(true);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  if (!metaListo) {
+    return <div className="min-h-screen bg-bg" aria-busy="true" />;
+  }
+
   return (
     <AuthProvider>
       <Routes>
@@ -46,7 +70,7 @@ export default function App() {
 
         <Route element={<RouteGuard permission="mapa" />}>
           <Route element={<ErpLayout />}>
-            <Route path="/mapa" element={<MapaPage />} />
+            <Route path="/mapa-sismico" element={<MapaPage />} />
           </Route>
         </Route>
 

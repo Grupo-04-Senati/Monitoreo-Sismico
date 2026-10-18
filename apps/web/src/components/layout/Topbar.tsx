@@ -1,11 +1,33 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "@/app/auth/AuthContext";
 import { ROLE_LABELS } from "@/types/auth";
-import { mockSources } from "@/lib/mock/data";
+import type { EstadoConector } from "@/types";
+import { cargarBarraFuente, type BarraFuente } from "@/modules/fuentes-datos/services/fuentes.service";
+import { ETIQUETA_CONECTOR } from "@/modules/fuentes-datos/schemas/fuentes.schema";
+import { fmtTimeUTC5 } from "@/lib/format";
 import { IconSunMoon, IconLogOut, IconServer } from "@/components/ui/Icons";
+
+const COLOR_CONECTOR: Record<EstadoConector, string> = {
+  operativo: "bg-success",
+  degradado: "bg-warning",
+  sin_conexion: "bg-danger",
+};
 
 export default function Topbar() {
   const { user, logout } = useAuth();
-  const src = mockSources[0];
+  const [fuente, setFuente] = useState<BarraFuente | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    cargarBarraFuente()
+      .then((f) => {
+        if (vivo) setFuente(f);
+      })
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const toggleTheme = () => {
     const el = document.documentElement;
@@ -21,19 +43,25 @@ export default function Topbar() {
     <header className="app-topbar h-[56px] border-b border-border flex items-center justify-between px-5 shrink-0 z-20">
       {/* Izquierda: fuente única */}
       <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2" title={`${src.organization} — ${src.name} · latencia ${src.latencyMs} ms`}>
-          <span
-            className={`w-2 h-2 rounded-full ${src.status === "online" ? "bg-success" : src.status === "degraded" ? "bg-warning" : "bg-danger"}`}
-            aria-hidden="true"
-          />
+        <div
+          className="flex items-center gap-2"
+          title={fuente ? `${fuente.organizacion} — ${fuente.nombre}` : "Cargando fuente…"}
+        >
+          {fuente ? (
+            <span className={`w-2 h-2 rounded-full ${COLOR_CONECTOR[fuente.estadoConector]}`} aria-hidden="true" />
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-border" aria-hidden="true" />
+          )}
           <span className="text-xs text-content-secondary font-medium">
-            Fuente: {src.organization}
-            <span className="hidden sm:inline text-content-muted"> ({src.status === "online" ? "en línea" : src.status === "degraded" ? "degradada" : "fuera de línea"})</span>
+            Fuente: {fuente ? fuente.organizacion : "—"}
+            {fuente && (
+              <span className="hidden sm:inline text-content-muted"> ({ETIQUETA_CONECTOR[fuente.estadoConector]})</span>
+            )}
           </span>
         </div>
         <div className="hidden md:flex items-center gap-1.5 text-xs text-content-muted">
           <IconServer size={13} />
-          <span>Sinc hace 5 min</span>
+          <span>{fuente ? `Último éxito ${fmtTimeUTC5(fuente.ultimoExitoUtc)}` : "Sinc: —"}</span>
         </div>
       </div>
 

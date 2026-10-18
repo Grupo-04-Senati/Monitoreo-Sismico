@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fmtDateUTC5 } from "@/lib/mock/data";
+import { fmtDateUTC5 } from "@/lib/format";
 
 const UTC5_MS = -5 * 60 * 60 * 1000;
 

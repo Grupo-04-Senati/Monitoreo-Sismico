@@ -21,7 +21,7 @@ const PASSWORD_RULES = [
   { label: "Un carácter especial", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-/* ── Panel derecho (comparte fondo de estrellas) ─────── */
+/* ── Panel derecho: mapa del Perú (solo visual) ─────── */
 function RightPanel() {
   return (
     <div
@@ -173,8 +173,7 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const result = register({ fullName, email, password });
+    const result = await register({ fullName, email, password });
     setLoading(false);
     if (result.success) setSuccess(true);
     else setServerError(result.error ?? "Error al registrar.");

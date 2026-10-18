@@ -2,13 +2,15 @@ import type { FiltrosEventos as Filtros, OpcionFiltro } from "../types";
 import {
   ESTADOS,
   LIMITES_MAGNITUD,
+  LIMITES_PROFUNDIDAD,
   PERIODOS,
   REGIONES,
+  TIPOS_MAGNITUD,
   type ErroresFiltros,
 } from "../schemas/filtros.schema";
-import { DATA_MAX_DAY, DATA_MIN_DAY } from "@/lib/mock/data";
+import { DATA_MAX_DAY, DATA_MIN_DAY } from "@/lib/ancla";
 import Combobox from "@/components/ui/Combobox";
-import { IconFilter } from "@/components/ui/Icons";
+import { IconFilter, IconSearch } from "@/components/ui/Icons";
 
 interface FiltrosEventosProps {
   filtros: Filtros;
@@ -42,7 +44,7 @@ export default function FiltrosEventos({ filtros, errores, hayFiltros, onCambiar
     <div
       role="group"
       aria-label="Filtros de eventos"
-      className="auth-surface mb-3 flex flex-wrap items-end gap-x-4 gap-y-3 rounded-[10px] border border-border bg-surface px-3.5 py-3"
+      className="auth-surface sticky top-2 z-20 mb-3 flex flex-wrap items-end gap-x-4 gap-y-3 rounded-[10px] border border-border bg-surface px-3.5 py-3"
     >
       <b className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content">
         <IconFilter size={14} />
@@ -156,6 +158,81 @@ export default function FiltrosEventos({ filtros, errores, hayFiltros, onCambiar
             {errores.magnitud}
           </p>
         )}
+      </div>
+
+      {/* Tipo de magnitud */}
+      <div className="flex flex-col gap-1">
+        <span className={labelCls}>Tipo</span>
+        <select
+          value={filtros.magnitudTipo}
+          onChange={(e) => onCambiar({ magnitudTipo: e.target.value as Filtros["magnitudTipo"] })}
+          aria-label="Tipo de magnitud"
+          className={inputCls}
+        >
+          {TIPOS_MAGNITUD.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Profundidad mínima / máxima */}
+      <div className="flex flex-col gap-1">
+        <span className={labelCls}>Profundidad (km)</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            inputMode="numeric"
+            step="1"
+            min={LIMITES_PROFUNDIDAD.min}
+            max={LIMITES_PROFUNDIDAD.max}
+            value={filtros.profundidadMin ?? ""}
+            placeholder="0"
+            onChange={(e) => onCambiar({ profundidadMin: aNumero(e.target.value) })}
+            aria-label="Profundidad mínima"
+            aria-invalid={Boolean(errores.profundidad)}
+            className={`${inputCls} w-20`}
+          />
+          <span className="text-content-muted" aria-hidden="true">
+            –
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            step="1"
+            min={LIMITES_PROFUNDIDAD.min}
+            max={LIMITES_PROFUNDIDAD.max}
+            value={filtros.profundidadMax ?? ""}
+            placeholder="750"
+            onChange={(e) => onCambiar({ profundidadMax: aNumero(e.target.value) })}
+            aria-label="Profundidad máxima"
+            aria-invalid={Boolean(errores.profundidad)}
+            aria-describedby={errores.profundidad ? "error-profundidad" : undefined}
+            className={`${inputCls} w-20`}
+          />
+        </div>
+        {errores.profundidad && (
+          <p id="error-profundidad" className="text-[11px] text-danger">
+            {errores.profundidad}
+          </p>
+        )}
+      </div>
+
+      {/* Búsqueda por localidad o ID */}
+      <div className="flex flex-col gap-1">
+        <span className={labelCls}>Búsqueda</span>
+        <span className="relative">
+          <IconSearch size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-content-muted" />
+          <input
+            type="search"
+            value={filtros.q}
+            onChange={(e) => onCambiar({ q: e.target.value })}
+            placeholder="Localidad o ID…"
+            aria-label="Buscar por localidad o identificador"
+            className={`${inputCls} pl-7`}
+          />
+        </span>
       </div>
 
       {/* Estado */}

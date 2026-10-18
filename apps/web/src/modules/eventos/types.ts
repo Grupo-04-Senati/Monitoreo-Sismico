@@ -7,6 +7,9 @@ import type {
   PaginaEventos,
   RangoProfundidad,
   ResumenEventos,
+  SeccionResumen,
+  TipoMagnitud,
+  TipoMagnitudFiltro,
 } from "@/types";
 
 export type {
@@ -18,6 +21,9 @@ export type {
   PaginaEventos,
   RangoProfundidad,
   ResumenEventos,
+  SeccionResumen,
+  TipoMagnitud,
+  TipoMagnitudFiltro,
 };
 
 /** Opción de la barra de filtros (periodo, estado…). */

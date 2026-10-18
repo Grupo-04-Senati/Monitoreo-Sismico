@@ -1,12 +1,11 @@
 import { useState, type ReactNode } from "react";
 import type { EventoSismico } from "../types";
 import { ETIQUETA_ESTADO } from "../schemas/filtros.schema";
-import { fmtDateTimeUTC5 } from "@/lib/mock/data";
+import { fmtDateTimeUTC5 } from "@/lib/format";
 import { SOURCE_NAME, SOURCE_URL } from "@/config/fuente";
 import { copyText } from "@/lib/export";
 import ExpandModal from "@/components/ui/ExpandModal";
-import MapaEvento from "./MapaEvento";
-import { IconCheck, IconChevronLeft, IconChevronRight } from "@/components/ui/Icons";
+import { IconCheck, IconChevronLeft, IconChevronRight, IconMapPin } from "@/components/ui/Icons";
 
 interface DetalleEventoModalProps {
   evento: EventoSismico;
@@ -56,12 +55,21 @@ export default function DetalleEventoModal({
   onSiguiente,
 }: DetalleEventoModalProps) {
   const [copiado, setCopiado] = useState(false);
+  const [copiadoCoord, setCopiadoCoord] = useState(false);
 
   const copiarHash = async () => {
     const ok = await copyText(evento.originHash);
     if (ok) {
       setCopiado(true);
       window.setTimeout(() => setCopiado(false), 2000);
+    }
+  };
+
+  const copiarCoords = async () => {
+    const ok = await copyText(`${evento.latitude.toFixed(4)}, ${evento.longitude.toFixed(4)}`);
+    if (ok) {
+      setCopiadoCoord(true);
+      window.setTimeout(() => setCopiadoCoord(false), 2000);
     }
   };
 
@@ -82,9 +90,12 @@ export default function DetalleEventoModal({
   );
 
   return (
-    <ExpandModal title="Detalle del evento" onClose={onCerrar} footer={pie}>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <MapaEvento latitude={evento.latitude} longitude={evento.longitude} />
+    <ExpandModal title="Detalle del evento" onClose={onCerrar} footer={pie} resizable>
+      <div className="grid grid-cols-1 gap-5">
+        <p className="flex items-center gap-1.5 text-xs text-content-muted">
+          <IconMapPin size={13} />
+          Coordenadas: {evento.latitude.toFixed(4)}, {evento.longitude.toFixed(4)} (lat, lon) · referencia aproximada
+        </p>
 
         <div>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -93,7 +104,11 @@ export default function DetalleEventoModal({
               valor={`${evento.magnitude.toFixed(1)}${evento.magnitudeType ? ` ${evento.magnitudeType}` : ""}`}
               detalle={`Tipo: ${evento.magnitudeType ?? "No informado por la fuente"}`}
             />
-            <TarjetaDato etiqueta="Profundidad" valor={`${evento.depthKm} km`} detalle="Del hipocentro a la superficie" />
+            <TarjetaDato
+              etiqueta="Profundidad"
+              valor={evento.depthKm != null ? `${evento.depthKm} km` : "—"}
+              detalle="Del hipocentro a la superficie"
+            />
             <TarjetaDato
               etiqueta="Fecha y hora (UTC-5)"
               valor={fmtDateTimeUTC5(evento.occurredAtUtc)}
@@ -133,6 +148,21 @@ export default function DetalleEventoModal({
             <Dato etiqueta="ID externo">{evento.externalId}</Dato>
             <Dato etiqueta="Fecha del evento (UTC)">
               <span title={`${evento.occurredAtUtc} (UTC)`}>{evento.occurredAtUtc}</span>
+            </Dato>
+            <Dato etiqueta="Coordenadas">
+              <span className="inline-flex items-center gap-2">
+                <code className="font-mono text-[11px]">
+                  {evento.latitude.toFixed(4)}, {evento.longitude.toFixed(4)}
+                </code>
+                <button
+                  type="button"
+                  onClick={copiarCoords}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] text-content-secondary transition-colors hover:bg-surface"
+                >
+                  {copiadoCoord && <IconCheck size={12} />}
+                  {copiadoCoord ? "Copiado" : "Copiar"}
+                </button>
+              </span>
             </Dato>
             <Dato etiqueta="Proveedor">{SOURCE_NAME}</Dato>
             <Dato etiqueta="URL de la fuente">

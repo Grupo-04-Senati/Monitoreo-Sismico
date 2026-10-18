@@ -1,5 +1,13 @@
-import type { CampoOrdenEventos, ChipFiltro, EstadoRevision, FiltrosEventos, OpcionFiltro, OrdenEventos } from "../types";
-import { REGION_OPTIONS, periodLabel } from "@/lib/mock/data";
+import type {
+  CampoOrdenEventos,
+  ChipFiltro,
+  EstadoRevision,
+  FiltrosEventos,
+  OpcionFiltro,
+  OrdenEventos,
+  TipoMagnitudFiltro,
+} from "../types";
+import { REGION_OPTIONS, periodLabel } from "@/lib/catalogo";
 
 /* ════════════════════════════════════════════════════════════════
    Contrato de filtros del módulo de Eventos sísmicos:
@@ -11,7 +19,24 @@ export const PERIODO_POR_DEFECTO = "30d";
 export const TAMANO_POR_DEFECTO = 10;
 export const ORDEN_POR_DEFECTO: OrdenEventos = { campo: "fecha", direccion: "desc" };
 export const LIMITES_MAGNITUD = { min: 2, max: 7 } as const;
+export const LIMITES_PROFUNDIDAD = { min: 0, max: 750 } as const;
 export const TAMANOS_PAGINA = [10, 25, 50] as const;
+
+/** Opciones del filtro por tipo de magnitud (incluye "sin tipo"). */
+export const TIPOS_MAGNITUD: OpcionFiltro[] = [
+  { value: "", label: "Todos los tipos" },
+  { value: "Mw", label: "Mw (momento)" },
+  { value: "ML", label: "ML (local)" },
+  { value: "mb", label: "mb (ondas de cuerpo)" },
+  { value: "none", label: "Sin tipo informado" },
+];
+
+export const ETIQUETA_TIPO: Record<Exclude<TipoMagnitudFiltro, "">, string> = {
+  Mw: "Mw",
+  ML: "ML",
+  mb: "mb",
+  none: "Sin tipo",
+};
 
 export const PERIODOS: OpcionFiltro[] = [
   { value: "24h", label: "24 h" },
@@ -60,9 +85,10 @@ export interface ErroresFiltros {
   desde?: string;
   hasta?: string;
   magnitud?: string;
+  profundidad?: string;
 }
 
-/** Valida mín ≤ máx (fechas y magnitud). El error se muestra junto al campo. */
+/** Valida mín ≤ máx (fechas, magnitud y profundidad). El error se muestra junto al campo. */
 export function validarFiltros(f: FiltrosEventos): ErroresFiltros {
   const errores: ErroresFiltros = {};
   if (f.periodo === "custom" && f.desde && f.hasta && f.desde > f.hasta) {
@@ -70,6 +96,9 @@ export function validarFiltros(f: FiltrosEventos): ErroresFiltros {
   }
   if (f.magnitudMin != null && f.magnitudMax != null && f.magnitudMin > f.magnitudMax) {
     errores.magnitud = "La magnitud mínima no puede ser mayor que la máxima.";
+  }
+  if (f.profundidadMin != null && f.profundidadMax != null && f.profundidadMin > f.profundidadMax) {
+    errores.profundidad = "La profundidad mínima no puede ser mayor que la máxima.";
   }
   return errores;
 }
@@ -82,6 +111,10 @@ export function hayFiltrosActivos(f: FiltrosEventos): boolean {
     Boolean(f.region) ||
     f.magnitudMin != null ||
     f.magnitudMax != null ||
+    Boolean(f.magnitudTipo) ||
+    f.profundidadMin != null ||
+    f.profundidadMax != null ||
+    Boolean(f.q) ||
     Boolean(f.estado)
   );
 }
@@ -109,8 +142,17 @@ export function filtrosDesdeParams(params: URLSearchParams): FiltrosEventos {
     region: params.get("region") ?? params.get("zona") ?? "",
     magnitudMin: numeroOParcial(params.get("magnitudMin") ?? params.get("magmin")),
     magnitudMax: numeroOParcial(params.get("magnitudMax") ?? params.get("magmax")),
+    magnitudTipo: tipoValido(params.get("tipo")),
+    profundidadMin: numeroOParcial(params.get("profMin")),
+    profundidadMax: numeroOParcial(params.get("profMax")),
+    q: params.get("q") ?? "",
     estado,
   };
+}
+
+/** Valida el parámetro de tipo de magnitud contra las opciones admitidas. */
+function tipoValido(valor: string | null): TipoMagnitudFiltro {
+  return valor === "Mw" || valor === "ML" || valor === "mb" || valor === "none" ? valor : "";
 }
 
 /** Serializa solo los filtros (sin orden ni paginación). */
@@ -124,6 +166,10 @@ export function filtrosAParams(f: FiltrosEventos): URLSearchParams {
   if (f.region) p.set("region", f.region);
   if (f.magnitudMin != null) p.set("magnitudMin", String(f.magnitudMin));
   if (f.magnitudMax != null) p.set("magnitudMax", String(f.magnitudMax));
+  if (f.magnitudTipo) p.set("tipo", f.magnitudTipo);
+  if (f.profundidadMin != null) p.set("profMin", String(f.profundidadMin));
+  if (f.profundidadMax != null) p.set("profMax", String(f.profundidadMax));
+  if (f.q) p.set("q", f.q);
   if (f.estado) p.set("estado", f.estado);
   return p;
 }
@@ -174,6 +220,10 @@ export function chipsDesdeFiltros(f: FiltrosEventos): ChipFiltro[] {
   if (f.region) chips.push({ clave: "region", etiqueta: `Región: ${nombreRegion(f.region)}` });
   if (f.magnitudMin != null) chips.push({ clave: "magnitudMin", etiqueta: `Magnitud ≥ ${f.magnitudMin.toFixed(1)}` });
   if (f.magnitudMax != null) chips.push({ clave: "magnitudMax", etiqueta: `Magnitud ≤ ${f.magnitudMax.toFixed(1)}` });
+  if (f.magnitudTipo) chips.push({ clave: "magnitudTipo", etiqueta: `Tipo: ${ETIQUETA_TIPO[f.magnitudTipo]}` });
+  if (f.profundidadMin != null) chips.push({ clave: "profundidadMin", etiqueta: `Profundidad ≥ ${f.profundidadMin} km` });
+  if (f.profundidadMax != null) chips.push({ clave: "profundidadMax", etiqueta: `Profundidad ≤ ${f.profundidadMax} km` });
+  if (f.q) chips.push({ clave: "q", etiqueta: `Buscar: “${f.q}”` });
   if (f.estado) chips.push({ clave: "estado", etiqueta: `Estado: ${ETIQUETA_ESTADO[f.estado]}` });
   return chips;
 }
@@ -189,6 +239,14 @@ export function filtroSinChip(clave: string): Partial<FiltrosEventos> {
       return { magnitudMin: null };
     case "magnitudMax":
       return { magnitudMax: null };
+    case "magnitudTipo":
+      return { magnitudTipo: "" };
+    case "profundidadMin":
+      return { profundidadMin: null };
+    case "profundidadMax":
+      return { profundidadMax: null };
+    case "q":
+      return { q: "" };
     case "estado":
       return { estado: "" };
     default:
@@ -205,6 +263,13 @@ export function resumenFiltros(f: FiltrosEventos): string {
     const hi = f.magnitudMax != null ? f.magnitudMax.toFixed(1) : "—";
     partes.push(`mag. ${lo}–${hi}`);
   }
+  if (f.magnitudTipo) partes.push(`tipo ${ETIQUETA_TIPO[f.magnitudTipo]}`);
+  if (f.profundidadMin != null || f.profundidadMax != null) {
+    const lo = f.profundidadMin != null ? `${f.profundidadMin}` : "—";
+    const hi = f.profundidadMax != null ? `${f.profundidadMax}` : "—";
+    partes.push(`prof. ${lo}–${hi} km`);
+  }
+  if (f.q) partes.push(`búsqueda “${f.q}”`);
   if (f.estado) partes.push(ETIQUETA_ESTADO[f.estado]);
   return partes.join(" · ");
 }

@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from "react";
 import type { CampoOrdenEventos, EventoSismico, EstadoRevision, OrdenEventos } from "../types";
 import { ETIQUETA_ESTADO, TAMANOS_PAGINA } from "../schemas/filtros.schema";
-import { fmtDateTimeUTC5 } from "@/lib/mock/data";
+import { fmtDateTimeUTC5 } from "@/lib/format";
 import { IconChevronLeft, IconChevronRight } from "@/components/ui/Icons";
 
 interface ColDef {
@@ -71,7 +71,7 @@ function Celda({ campo, e }: { campo: CampoOrdenEventos; e: EventoSismico }) {
         </>
       );
     case "profundidad":
-      return <>{e.depthKm}</>;
+      return <>{e.depthKm ?? "—"}</>;
     case "estado":
       return <Estado estado={e.reviewStatus} />;
     case "id":

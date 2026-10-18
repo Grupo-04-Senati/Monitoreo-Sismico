@@ -9,6 +9,10 @@ interface HBarChartProps {
   ariaLabel?: string;
   /** Clases de ancho para la columna de etiquetas */
   labelWidth?: string;
+  /** Clave de la fila resaltada (selección) */
+  selectedKey?: string | null;
+  /** Al hacer clic en una fila se informa el dato (abre detalle) */
+  onBarClick?: (d: ChartDatum) => void;
 }
 
 /**
@@ -21,6 +25,8 @@ export default function HBarChart({
   fill = false,
   ariaLabel,
   labelWidth = "w-24",
+  selectedKey = null,
+  onBarClick,
 }: HBarChartProps) {
   if (!data.length || !data.some((d) => d.value > 0)) {
     return (
@@ -48,8 +54,15 @@ export default function HBarChart({
         {data.map((d, i) => {
           const pct = (d.value / maxV) * 100;
           const inside = pct >= 28;
+          const isSel = selectedKey != null && d.key === selectedKey;
           return (
-            <div key={i} className="group relative flex-1 min-h-[22px] flex items-center gap-2.5">
+            <div
+              key={i}
+              className={`group relative flex-1 min-h-[22px] flex items-center gap-2.5 rounded ${
+                onBarClick ? "cursor-pointer" : ""
+              } ${isSel ? "bg-surface-tertiary" : "hover:bg-surface-tertiary"}`}
+              onClick={onBarClick ? () => onBarClick(d) : undefined}
+            >
               <span className={`${labelWidth} shrink-0 text-right text-[11px] font-medium text-content-secondary`}>
                 {d.label}
               </span>

@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/app/auth/AuthContext";
+
 import {
   IconDashboard, IconEvents, IconMap, IconAnalytics, IconDatabase,
   IconML, IconEstimate, IconAlertRule, IconAlertCenter, IconSource,
@@ -24,7 +25,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/", label: "Dashboard", permission: "dashboard", icon: IconDashboard },
       { to: "/eventos", label: "Eventos sísmicos", permission: "eventos", icon: IconEvents },
-      { to: "/mapa", label: "Mapa sísmico", permission: "mapa", icon: IconMap },
+      { to: "/mapa-sismico", label: "Mapa sísmico", permission: "mapa", icon: IconMap },
     ],
   },
   {

@@ -10,6 +10,12 @@ export interface User {
   status: UserStatus;
   createdAt: string;
   lastLoginAt?: string;
+  /**
+   * Permisos que concede el backend para esta sesión. Si están presentes son
+   * la fuente de verdad para el gating de la interfaz; si no, se usa
+   * `ROLE_PERMISSIONS[role]` como respaldo.
+   */
+  permissions?: string[];
 }
 
 export interface RegisterData {
@@ -34,9 +40,9 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_PERMISSIONS: Record<Role, string[]> = {
-  admin: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "preparacion", "modelos", "estimaciones", "reglas", "alertas", "fuentes", "reportes", "usuarios", "auditoria", "configuracion"],
-  analyst: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "preparacion", "modelos", "estimaciones", "reportes"],
-  alert_operator: ["dashboard", "eventos", "eventos_exportar", "mapa", "reglas", "alertas"],
-  auditor: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "auditoria", "reportes"],
-  viewer: ["dashboard", "eventos", "mapa"],
+  admin: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "preparacion", "modelos", "estimaciones", "reglas", "alertas", "fuentes", "fuentes_sincronizar", "fuentes_configurar", "reportes", "reportes_generar", "reportes_pdf", "usuarios", "auditoria", "configuracion"],
+  analyst: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "preparacion", "modelos", "estimaciones", "fuentes", "reportes", "reportes_generar", "reportes_pdf"],
+  alert_operator: ["dashboard", "eventos", "eventos_exportar", "mapa", "reglas", "alertas", "reportes", "reportes_generar"],
+  auditor: ["dashboard", "eventos", "eventos_exportar", "mapa", "analisis", "fuentes", "usuarios", "auditoria", "reportes", "reportes_generar"],
+  viewer: ["dashboard", "eventos", "mapa", "reportes"],
 };

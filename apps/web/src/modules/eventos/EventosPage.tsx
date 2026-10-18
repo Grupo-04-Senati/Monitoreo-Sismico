@@ -2,11 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/app/auth/AuthContext";
 import { SOURCE_NAME } from "@/config/fuente";
-import { DATA_RANGE_LABEL, NOW, fmtTimeUTC5 } from "@/lib/mock/data";
+import { DATA_RANGE_LABEL } from "@/lib/ancla";
+import { fmtTimeUTC5 } from "@/lib/format";
+import { useMeta } from "@/lib/useMeta";
 import { useFiltrosURL } from "./hooks/useFiltrosURL";
 import { useEventos } from "./hooks/useEventos";
-import { chipsDesdeFiltros, resumenFiltros } from "./schemas/filtros.schema";
-import { exportarEventosCsv, obtenerProcedencia } from "./services/eventos.service";
+import { chipsDesdeFiltros, ORDEN_POR_DEFECTO, resumenFiltros } from "./schemas/filtros.schema";
+import {
+  descargarEventos,
+  FILTROS_CATALOGO,
+  listarSeleccion,
+  nombreExport,
+  obtenerProcedencia,
+  type AlcanceExport,
+  type FormatoExport,
+} from "./services/eventos.service";
+import { DATA_MAX_DAY } from "@/lib/ancla";
+import type { EventoSismico, SeccionResumen } from "./types";
 import AvisoObservacion from "./components/AvisoObservacion";
 import FranjaProcedencia from "./components/FranjaProcedencia";
 import TarjetasResumen from "./components/TarjetasResumen";
@@ -18,6 +30,8 @@ import TablaSkeleton from "./components/TablaSkeleton";
 import EstadoVacio from "./components/EstadoVacio";
 import Glosario from "./components/Glosario";
 import DetalleEventoModal from "./components/DetalleEventoModal";
+import ModalExportar from "./components/ModalExportar";
+import ModalResumen from "./components/ModalResumen";
 import { IconAlertTriangle, IconClock, IconDownload, IconEvents } from "@/components/ui/Icons";
 
 export default function EventosPage() {
@@ -41,13 +55,16 @@ export default function EventosPage() {
 
   const { cargando, error, datos, resumen, reintentar } = useEventos(filtros, orden, pagina, tamano);
   const [seleccion, setSeleccion] = useState<number | null>(null);
+  const [exportar, setExportar] = useState(false);
+  const [resumenAbierto, setResumenAbierto] = useState<{ seccion: SeccionResumen; eventos: EventoSismico[] } | null>(null);
 
   /* Al cambiar filtros/orden/página se cierra el detalle abierto. */
   useEffect(() => setSeleccion(null), [filtros, orden, pagina, tamano]);
 
   const procedencia = useMemo(() => obtenerProcedencia(), []);
   const chips = useMemo(() => chipsDesdeFiltros(filtros), [filtros]);
-  const actTime = fmtTimeUTC5(NOW.toISOString());
+  const metaIso = useMeta();
+  const actTime = fmtTimeUTC5(metaIso);
   const filas = datos?.filas ?? [];
   const total = datos?.total ?? 0;
 
@@ -57,7 +74,26 @@ export default function EventosPage() {
     ? "Tu rol no permite exportar datos"
     : total === 0
       ? "No hay eventos que exportar"
-      : `Exportar ${total} eventos a CSV`;
+      : "Exportar eventos (filtrados o todo el catálogo)";
+
+  const [totalCatalogo, setTotalCatalogo] = useState(0);
+  const fechaArchivo = filtros.periodo === "custom" && filtros.hasta ? filtros.hasta : DATA_MAX_DAY;
+
+  useEffect(() => {
+    listarSeleccion(FILTROS_CATALOGO, ORDEN_POR_DEFECTO).then((filas) => setTotalCatalogo(filas.length));
+  }, []);
+
+  /* Toda la selección filtrada (no solo la página) para los modales de resumen. */
+  const abrirResumen = async (seccion: SeccionResumen) => {
+    const eventos = await listarSeleccion(filtros, orden);
+    setResumenAbierto({ seccion, eventos });
+  };
+
+  const descargar = async (alcance: AlcanceExport, formato: FormatoExport) => {
+    const eventos = await listarSeleccion(alcance === "filtrados" ? filtros : FILTROS_CATALOGO, orden);
+    descargarEventos(eventos, formato, nombreExport(alcance, fechaArchivo));
+    setExportar(false);
+  };
 
   const evento = seleccion != null ? filas[seleccion] ?? null : null;
   const posicion = datos && seleccion != null ? (datos.pagina - 1) * datos.tamano + seleccion + 1 : 0;
@@ -89,13 +125,13 @@ export default function EventosPage() {
           </span>
           <button
             type="button"
-            onClick={() => exportarEventosCsv(filtros, orden)}
+            onClick={() => setExportar(true)}
             disabled={!puedeExportar || total === 0}
             title={tituloExportar}
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40"
           >
             <IconDownload size={14} />
-            Exportar CSV
+            Exportar
           </button>
         </div>
       </div>
@@ -107,7 +143,7 @@ export default function EventosPage() {
       <FranjaProcedencia procedencia={procedencia} />
 
       {/* Resumen de la selección */}
-      <TarjetasResumen resumen={resumen} />
+      <TarjetasResumen resumen={resumen} onAbrir={abrirResumen} />
 
       {/* Filtros */}
       <FiltrosEventos
@@ -198,6 +234,26 @@ export default function EventosPage() {
           onCerrar={() => setSeleccion(null)}
           onAnterior={() => setSeleccion((s) => (s == null ? s : Math.max(0, s - 1)))}
           onSiguiente={() => setSeleccion((s) => (s == null ? s : Math.min(filas.length - 1, s + 1)))}
+        />
+      )}
+
+      {/* Resumen de una tarjeta */}
+      {resumenAbierto && (
+        <ModalResumen
+          seccion={resumenAbierto.seccion}
+          eventos={resumenAbierto.eventos}
+          resumen={resumen}
+          onCerrar={() => setResumenAbierto(null)}
+        />
+      )}
+
+      {/* Exportación */}
+      {exportar && (
+        <ModalExportar
+          totalFiltrados={total}
+          totalCatalogo={totalCatalogo}
+          onCerrar={() => setExportar(false)}
+          onDescargar={descargar}
         />
       )}
     </div>
