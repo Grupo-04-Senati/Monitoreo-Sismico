@@ -1,11 +1,13 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+WORKDIR /services/api
 
 COPY services/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/api/ .
+# El motor de ingesta se comparte como paquete hermano (`ingestion`).
+COPY services/ingestion/ /services/ingestion/
 
 EXPOSE 8000
 

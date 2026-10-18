@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -27,12 +25,13 @@ services:
 
   api:
     build:
-      context: ../../services/api
-      dockerfile: ../../infra/docker/Dockerfile.api
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
     container_name: sismo-api
     environment:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
+      INGESTION_INTERVAL_MINUTES: ${INGESTION_INTERVAL_MINUTES:-15}
     ports:
       - "8000:8000"
     depends_on:
@@ -43,13 +42,30 @@ services:
 
   worker:
     build:
-      context: ../../services/api
-      dockerfile: ../../infra/docker/Dockerfile.api
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
     container_name: sismo-worker
     command: celery -A app.tasks.celery_app worker --loglevel=info
     environment:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
+      INGESTION_INTERVAL_MINUTES: ${INGESTION_INTERVAL_MINUTES:-15}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  beat:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: sismo-beat
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      POSTGRES_HOST: db
+      REDIS_URL: redis://redis:6379/0
+      INGESTION_INTERVAL_MINUTES: ${INGESTION_INTERVAL_MINUTES:-15}
     depends_on:
       db:
         condition: service_healthy
