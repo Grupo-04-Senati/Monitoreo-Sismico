@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import uuid
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.database import get_db
+from app.db.models import IngestionRun, SeismicEvent
 from app.routers import (
     auth,
     eventos,
@@ -33,6 +39,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next):
+    """Propaga un identificador de correlación para trazar cada petición."""
+    correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
+    request.state.correlation_id = correlation_id
+    response = await call_next(request)
+    response.headers["X-Correlation-ID"] = correlation_id
+    return response
+
+
 API_PREFIX = "/api/v1"
 
 app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["auth"])
@@ -48,9 +65,35 @@ app.include_router(alerts.router, prefix=f"{API_PREFIX}/alerts", tags=["alerts"]
 app.include_router(fuentes.router, prefix=f"{API_PREFIX}/sources", tags=["fuentes"])
 app.include_router(reportes.router, prefix=f"{API_PREFIX}/reports", tags=["reportes"])
 app.include_router(usuarios.router, prefix=f"{API_PREFIX}/users", tags=["usuarios"])
+app.include_router(usuarios.roles_router, prefix=API_PREFIX, tags=["usuarios"])
 app.include_router(auditoria.router, prefix=f"{API_PREFIX}/audit-logs", tags=["auditoria"])
 
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get(f"{API_PREFIX}/meta")
+async def meta(db: AsyncSession = Depends(get_db)):
+    """Metadatos del sistema.
+
+    `data_min_day`/`data_max_day`/`last_sync_at` se calculan del catálogo real
+    (nunca de valores fijos del cliente).
+    """
+    from datetime import timedelta, timezone
+
+    from app.core.clock import now as clock_now
+
+    mn = await db.scalar(select(func.min(SeismicEvent.occurred_at)))
+    mx = await db.scalar(select(func.max(SeismicEvent.occurred_at)))
+    last = await db.scalar(select(func.max(IngestionRun.finished_at)))
+
+    u5 = timezone(timedelta(hours=-5))
+    return {
+        "version": "0.1.0",
+        "generated_at": clock_now().isoformat().replace("+00:00", "Z"),
+        "data_min_day": mn.astimezone(u5).date().isoformat() if mn else None,
+        "data_max_day": mx.astimezone(u5).date().isoformat() if mx else None,
+        "last_sync_at": last.isoformat().replace("+00:00", "Z") if last else None,
+    }

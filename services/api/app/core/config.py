@@ -1,7 +1,16 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    #: Entorno de ejecución: "development" | "test" | "production".
+    ENV: str = "development"
+
     POSTGRES_USER: str = "sismo"
     POSTGRES_PASSWORD: str = "sismo_dev"
     POSTGRES_DB: str = "sismo_db"
@@ -15,7 +24,16 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    #: Cookies de sesión. `Secure` debe activarse en producción (HTTPS).
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
+
     REDIS_URL: str = "redis://redis:6379/0"
+
+    #: Clave de la fuente única del MVP (mientras no exista la fuente real).
+    INGESTION_SOURCE_KEY: str = "igp"
+    #: Frecuencia de la ingesta programada (minutos).
+    INGESTION_INTERVAL_MINUTES: int = 15
 
     @property
     def database_url(self) -> str:
