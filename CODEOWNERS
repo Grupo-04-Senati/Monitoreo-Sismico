@@ -1,0 +1,78 @@
+# CODEOWNERS — Sismora
+#
+# Define quién debe revisar cada parte del repositorio (GitHub muestra "Review required").
+# Reemplaza @dueno-a y @dueno-b por los usuarios reales de GitHub del equipo:
+#   dueño A = autor de Dashboard, Eventos, Mapa, Análisis, Fuentes, Reportes, Usuarios y auth.
+#   dueño B = autor de Preparación de datos, Modelos ML, Estimaciones, Alertas, Auditoría, Configuración.
+# Mientras sean marcadores, GitHub no asignará revisores automáticos.
+
+# ---------------------------------------------------------------------------
+# Reglas por defecto: cualquier archivo no listado abajo lo revisan ambos.
+# ---------------------------------------------------------------------------
+*                       @dueno-a @dueno-b
+
+# ---------------------------------------------------------------------------
+# Dueño A
+# ---------------------------------------------------------------------------
+/apps/web/src/modules/dashboard/        @dueno-a
+/apps/web/src/modules/eventos/          @dueno-a
+/apps/web/src/modules/mapa-sismico/     @dueno-a
+/apps/web/src/modules/analisis/         @dueno-a
+/apps/web/src/modules/fuentes-datos/    @dueno-a
+/apps/web/src/modules/reportes/         @dueno-a
+/apps/web/src/modules/usuarios-roles/   @dueno-a
+/apps/web/src/app/auth/                 @dueno-a
+
+/services/api/app/routers/dashboard.py  @dueno-a
+/services/api/app/routers/eventos.py    @dueno-a
+/services/api/app/routers/mapa.py       @dueno-a
+/services/api/app/routers/analisis.py   @dueno-a
+/services/api/app/routers/fuentes.py    @dueno-a
+/services/api/app/routers/reportes.py   @dueno-a
+/services/api/app/routers/usuarios.py   @dueno-a
+/services/api/app/routers/auth.py       @dueno-a
+
+/services/api/app/services/analytics.py         @dueno-a
+/services/api/app/services/events.py            @dueno-a
+/services/api/app/services/sources.py           @dueno-a
+/services/api/app/services/reports_service.py   @dueno-a
+/services/api/app/services/reports/             @dueno-a
+/services/api/app/services/identity.py          @dueno-a
+/services/api/app/services/usuarios_activity.py @dueno-a
+/services/api/app/services/login_throttle.py    @dueno-a
+
+# ---------------------------------------------------------------------------
+# Dueño B
+# ---------------------------------------------------------------------------
+/apps/web/src/modules/preparacion-datos/  @dueno-b
+/apps/web/src/modules/modelos-ml/         @dueno-b
+/apps/web/src/modules/estimaciones/       @dueno-b
+/apps/web/src/modules/alertas/            @dueno-b
+/apps/web/src/modules/auditoria/          @dueno-b
+/apps/web/src/modules/configuracion/      @dueno-b
+
+/services/api/app/routers/datasets.py     @dueno-b
+/services/api/app/routers/ml.py           @dueno-b
+/services/api/app/routers/estimaciones.py @dueno-b
+/services/api/app/routers/alert_rules.py  @dueno-b
+/services/api/app/routers/alerts.py       @dueno-b
+/services/api/app/routers/auditoria.py    @dueno-b
+/services/ml/                             @dueno-b
+
+# ---------------------------------------------------------------------------
+# Compartidos (aviso + PR pequeño). Requieren revisión de ambos.
+# ---------------------------------------------------------------------------
+/apps/web/src/components/layout/Sidebar.tsx   @dueno-a @dueno-b
+/apps/web/src/App.tsx                          @dueno-a @dueno-b
+/services/api/app/core/permissions.py          @dueno-a @dueno-b
+/services/api/app/main.py                      @dueno-a @dueno-b
+/services/api/app/db/models.py                 @dueno-a @dueno-b
+/package.json                                  @dueno-a @dueno-b
+/services/api/requirements.txt                 @dueno-a @dueno-b
+/infra/docker/docker-compose.yml               @dueno-a @dueno-b
+
+# ---------------------------------------------------------------------------
+# Documentación y reglas del equipo
+# ---------------------------------------------------------------------------
+/AGENTS.md    @dueno-a @dueno-b
+/docs/        @dueno-a @dueno-b

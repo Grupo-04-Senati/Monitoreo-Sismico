@@ -26,14 +26,27 @@ npm run dev
 
 Abrir **http://localhost:5173** en el navegador.
 
-## Cuentas de prueba
+## Primera cuenta (administrador)
 
-| Correo | Contraseña | Rol |
-|---|---|---|
-| `admin@sismo.pe` | `Admin123!` | Administrador |
-| `analista@sismo.pe` | `Analista123!` | Analista |
-| `operador@sismo.pe` | `Operador123!` | Operador de alertas |
-| `auditor@sismo.pe` | `Auditor123!` | Auditor |
+La base de datos arranca **vacía** (sin cuentas ni datos de ejemplo). El registro
+público deja las cuentas en estado pendiente y solo un administrador puede
+aprobarlas, así que la primera cuenta se crea por consola:
+
+```bash
+cd services/api            # con el entorno virtual activo
+python -m app.scripts.crear_admin --email admin@tu-dominio.pe
+```
+
+La contraseña **no se pasa por parámetro** (quedaría en el historial): el script
+la pide de forma interactiva, o la toma de la variable de entorno
+`SISMO_ADMIN_PASSWORD` en entornos no interactivos. No se guarda ninguna
+contraseña en el repositorio.
+
+## Más documentación
+
+- `AGENTS.md` — reparto de módulos, reglas y contratos del equipo.
+- `docs/HANDOFF.md` — cómo levantar todo el sistema y qué queda pendiente.
+- `docs/CONTRATOS.md`, `docs/DECISIONES.md` — contratos y decisiones de diseño.
 
 ## Estructura del proyecto
 
@@ -43,7 +56,7 @@ apps/web/src/
 │   ├── auth/               # Contexto, Login, Registro
 │   ├── guards/             # RouteGuard por permiso
 ├── modules/                # 13 módulos funcionales
-│   ├── dashboard/          # Dashboard con datos mock
+│   ├── dashboard/          # Dashboard operativo
 │   ├── eventos/            # Eventos sísmicos
 │   ├── mapa-sismico/       # Mapa geográfico
 │   ├── analisis/           # Análisis estadístico
@@ -57,11 +70,10 @@ apps/web/src/
 │   ├── auditoria/          # Historial de acciones
 │   └── configuracion/      # Parámetros del sistema
 ├── components/             # UI reutilizable
-│   ├── ui/                 # Card, KpiCard, DataTable, Drawer...
-│   ├── charts/             # MiniBarChart
-│   └── layout/             # Sidebar, Topbar, PageTemplate
-├── lib/
-│   └── mock/               # Datos mock para desarrollo
+│   ├── ui/                 # Card, DataTable, ExpandModal, Combobox...
+│   ├── charts/             # AreaChart, BarChart, HBarChart, Sparkline
+│   └── layout/             # Sidebar, Topbar, Breadcrumbs
+├── lib/                    # Utilidades (catálogo, formatos, ancla temporal)
 ├── types/                  # Tipos TypeScript
 ├── hooks/                  # Hooks personalizados
 └── schemas/                # Validación de formularios
