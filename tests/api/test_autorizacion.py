@@ -52,6 +52,8 @@ RUTAS_B: list[tuple[str, str, str]] = [
     ("POST", "/api/v1/datasets/x/approve", "rol:admin"),
     ("GET", "/api/v1/ml/experiments", "modelos"),
     ("GET", "/api/v1/ml/experiments/x", "modelos"),
+    ("POST", "/api/v1/ml/experiments", "modelos"),
+    ("GET", "/api/v1/ml/models", "modelos"),
     ("POST", "/api/v1/ml/models/x/approve", "rol:admin"),
     ("GET", "/api/v1/estimates", "estimaciones"),
     ("GET", "/api/v1/alert-rules", "reglas"),

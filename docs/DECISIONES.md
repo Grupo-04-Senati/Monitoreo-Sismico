@@ -162,3 +162,23 @@ solo se registran los puntos grises.
   (< 60 s y < 50 km) pueden ser réplicas reales: por eso solo se quitan si se pide.
 - **Descartado:** guardar solo la consulta (no reproducible), partición aleatoria (fuga de
   datos en series temporales) e imputación silenciosa (se guarda método y valor).
+
+## D17. Experimentos de ML: referencias, partición del dataset y aprobación
+
+- **Decisión:** dos tareas. `conteo_semanal` (D2): sismos del dataset por semana (lunes
+  UTC) estimados con rezagos de 1, 2 y 4 semanas y la media de las 12 anteriores;
+  modelos lineal y de Poisson frente a dos referencias, la media del entrenamiento y la
+  semana anterior. `regresion_lineal`: ejercicio didáctico del PDF §10 con las variables
+  y el objetivo que declara el dataset. Siempre se usa la partición temporal del dataset
+  (aprobado e inmutable) y se mide en prueba con MAE (principal), RMSE y R². Se guardan
+  semilla, versiones de librerías, coeficientes, la serie real-vs-estimada y el artefacto.
+  El experimento no se modifica (trigger). Se aprueba en `model_registry` solo si gana un
+  modelo, nunca una referencia.
+- **Motivo:** los conteos semanales están muy dispersos (réplicas: varianza ~17 con media
+  ~2,5), así que un modelo solo aporta si supera a referencias simples, y eso hay que
+  mostrarlo. Con los datos reales (2000–2026, M ≥ 4.5, corte 2022) Poisson mejora a la
+  media solo un ~2 %: se advierte como mejora marginal, no como capacidad de pronóstico.
+- **Costo:** se entrena dentro de la petición (segundos); si crece, pasa a Celery sin
+  cambiar las tablas. No hay clasificación todavía.
+- **Descartado:** partición aleatoria (fuga de información), aprobar una referencia como
+  si fuera un modelo y prometer predicción de sismos.

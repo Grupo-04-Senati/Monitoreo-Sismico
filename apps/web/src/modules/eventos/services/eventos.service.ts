@@ -1,7 +1,7 @@
 import { DATA_RANGE_LABEL, LAST_SYNC_AT } from "@/lib/ancla";
 import { periodBounds } from "@/lib/catalogo";
 import { fmtDateTimeUTC5 } from "@/lib/format";
-import { apiGet } from "@/lib/api";
+import { ApiError, apiGet } from "@/lib/api";
 import { downloadFile } from "@/lib/export";
 import { buildXlsx, type XlsxSheet } from "@/lib/xlsx";
 import { SOURCE_NAME } from "@/config/fuente";
@@ -88,19 +88,35 @@ const PAGINA_COMPLETA = 1000;
 const VIGENCIA_MS = 60_000;
 /** Consultas distintas que se guardan a la vez. */
 const MAX_ENTRADAS = 20;
+/** Tiempo máximo para descargar una lista completa. */
+const LIMITE_MS = 30_000;
 
 const cache = new Map<string, { hasta: number; promesa: Promise<EventoSismico[]> }>();
 
 async function descargarTodos(base: string): Promise<EventoSismico[]> {
   const sep = base ? "&" : "";
   const url = (pagina: number) => `/events?${base}${sep}page=${pagina}&page_size=${PAGINA_COMPLETA}&sort=-occurred_at`;
-  const primera = await apiGet<{ items: EventOutAPI[]; total: number }>(url(1));
-  const paginas = Math.ceil(primera.total / PAGINA_COMPLETA);
-  const resto = await Promise.all(
-    Array.from({ length: Math.max(0, paginas - 1) }, (_, i) =>
-      apiGet<{ items: EventOutAPI[]; total: number }>(url(i + 2)),
-    ),
-  );
+  // Una petición colgada (p. ej. si la API se reinicia a mitad) no debe dejar la
+  // pantalla cargando para siempre: se cancela y la pantalla muestra su error.
+  const control = new AbortController();
+  const limite = setTimeout(() => control.abort(), LIMITE_MS);
+  const opciones = { signal: control.signal };
+  let primera: { items: EventOutAPI[]; total: number };
+  let resto: { items: EventOutAPI[]; total: number }[];
+  try {
+    primera = await apiGet<{ items: EventOutAPI[]; total: number }>(url(1), opciones);
+    const paginas = Math.ceil(primera.total / PAGINA_COMPLETA);
+    resto = await Promise.all(
+      Array.from({ length: Math.max(0, paginas - 1) }, (_, i) =>
+        apiGet<{ items: EventOutAPI[]; total: number }>(url(i + 2), opciones),
+      ),
+    );
+  } catch (error) {
+    if (control.signal.aborted) throw new ApiError(0, "La API tardó demasiado en responder. Reintente.");
+    throw error;
+  } finally {
+    clearTimeout(limite);
+  }
   // Si entra un evento nuevo entre páginas, uno puede repetirse en el borde: se quita.
   const porId = new Map<string, EventoSismico>();
   for (const data of [primera, ...resto]) {
