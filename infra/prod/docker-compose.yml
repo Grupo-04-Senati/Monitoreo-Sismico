@@ -1,0 +1,114 @@
+# Despliegue de producción (ver docs/DESPLIEGUE.md y la decisión D22).
+#
+#   cp infra/prod/.env.prod.example infra/prod/.env.prod   # y completar
+#   docker compose -f infra/prod/docker-compose.yml --env-file infra/prod/.env.prod up -d --build
+#
+# Solo Caddy publica puertos (80/443). La base y Redis quedan en la red interna.
+name: sismo
+
+x-api: &api
+  build:
+    context: ../..
+    dockerfile: infra/prod/Dockerfile.api
+  image: sismo-api:${SISMO_VERSION:-local}
+  env_file: .env.prod
+  environment:
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    REDIS_URL: redis://redis:6379/0
+  volumes:
+    - ml-artifacts:/data/ml-artifacts
+    - reports:/data/reports
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sismo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-sismo_db}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sismo} -d ${POSTGRES_DB:-sismo_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  api:
+    <<: *api
+    command: ["api"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    <<: *api
+    command: ["worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy
+
+  beat:
+    <<: *api
+    command: ["beat"]
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/prod/Dockerfile.web
+    image: sismo-web:${SISMO_VERSION:-local}
+    restart: unless-stopped
+    environment:
+      SISMO_DOMINIO: ${SISMO_DOMINIO:?Defina SISMO_DOMINIO en .env.prod}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-sismo}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-sismo_db}
+      BACKUP_DIR: /backups
+      RETENCION_DIAS: ${RETENCION_DIAS:-14}
+      BACKUP_INTERVALO_SEG: ${BACKUP_INTERVALO_SEG:-86400}
+    volumes:
+      - ../backup:/scripts:ro
+      - ${SISMO_BACKUP_DIR:-./backups}:/backups
+    entrypoint: ["/bin/sh", "/scripts/programar.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  ml-artifacts:
+  reports:
+  caddy-data:
+  caddy-config:

@@ -59,10 +59,14 @@ npm install
 npm run dev                              # http://localhost:5173
 ```
 
-### 2.6 Todo con Docker (opcional)
+### 2.6 Todo con Docker (opcional, desarrollo)
 ```bash
 docker compose -f infra/docker/docker-compose.yml up --build
 ```
+
+### 2.7 Producción
+Ver **`docs/DESPLIEGUE.md`** (D22): `infra/prod/` con HTTPS automático, copias diarias
+de PostgreSQL, restauración y simulacro.
 
 ## 3. Verificaciones (antes de cada PR)
 

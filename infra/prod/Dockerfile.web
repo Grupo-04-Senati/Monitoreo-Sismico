@@ -1,0 +1,13 @@
+# Imagen de producción del frontend: compila con Vite y lo sirve Caddy, que además
+# obtiene el certificado HTTPS y reenvía /api a la API (mismo dominio: cookies seguras).
+FROM node:20-alpine AS build
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/
+RUN npm ci
+COPY apps/web/ apps/web/
+RUN npm run build:web
+
+FROM caddy:2.8-alpine
+COPY infra/prod/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /repo/apps/web/dist /srv/www

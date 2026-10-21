@@ -2,6 +2,8 @@
 #   - backend: migraciones sobre PostgreSQL vacío + toda la suite de pytest.
 #   - frontend: instalación reproducible (package-lock), tipos y build de Vite.
 #   - seguridad: ningún .env versionado; auditoría de dependencias (informativa).
+#   - despliegue: construye las imágenes de producción, levanta todo con HTTPS
+#     (Caddy en localhost), prueba de humo y simulacro de restauración de la copia.
 # Las pruebas que necesitan sismos reales se omiten solas en una base vacía; las de
 # autorización, reglas, seguridad, configuración, ML e ingesta sí corren.
 name: CI
@@ -92,7 +94,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Ningún archivo .env versionado
         run: |
-          if git ls-files | grep -E '(^|/)\.env$'; then
+          if git ls-files | grep -E '(^|/)\.env(\.prod)?$'; then
             echo "::error::Hay un archivo .env en el repositorio: retírelo y rote sus secretos."
             exit 1
           fi
@@ -110,3 +112,52 @@ jobs:
       - name: Vulnerabilidades conocidas en dependencias de Node (informativo)
         continue-on-error: true
         run: npm audit --audit-level=high --omit=dev
+
+  despliegue:
+    name: Despliegue (imágenes + prueba de humo con HTTPS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COMPOSE: docker compose -f infra/prod/docker-compose.yml --env-file infra/prod/.env.prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: Variables de producción desechables (secretos aleatorios por ejecución)
+        run: |
+          cat > infra/prod/.env.prod <<EOF
+          ENV=production
+          SISMO_DOMINIO=localhost
+          CORS_ORIGINS=["https://sismo.ci.invalid"]
+          POSTGRES_USER=sismo
+          POSTGRES_PASSWORD=$(openssl rand -hex 24)
+          POSTGRES_DB=sismo_db
+          API_SECRET_KEY=$(openssl rand -hex 32)
+          COOKIE_SECURE=true
+          API_DEBUG=false
+          DB_ECHO=false
+          SISMO_BACKUP_DIR=./backups
+          EOF
+      - name: Validar docker-compose
+        run: $COMPOSE config --quiet
+      - name: Construir y levantar (la API arranca en modo producción)
+        run: $COMPOSE up -d --build --wait --wait-timeout 300
+      - name: Prueba de humo por HTTPS
+        run: |
+          set -e
+          curl -kfsS https://localhost/health
+          curl -kfsS https://localhost/ | grep -q 'id="root"'
+          curl -kfsS https://localhost/eventos | grep -q 'id="root"'
+          test "$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/me)" = "401"
+          curl -ksI https://localhost/ | grep -qi 'strict-transport-security'
+          curl -ksI https://localhost/ | grep -qi 'content-security-policy'
+          curl -ksI https://localhost/health | grep -qi 'x-frame-options: deny'
+          echo "HTTP → $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost/)"
+      - name: Copia de seguridad y simulacro de restauración
+        run: |
+          $COMPOSE exec -T backup sh /scripts/respaldar.sh
+          $COMPOSE exec -T backup sh /scripts/simulacro_restauracion.sh
+      - name: Registros si algo falló
+        if: failure()
+        run: $COMPOSE logs --no-color --tail 200
+      - name: Apagar y borrar volúmenes
+        if: always()
+        run: $COMPOSE down -v

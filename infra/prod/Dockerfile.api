@@ -1,0 +1,35 @@
+# Imagen de producción de la API (también corre el worker y el programador de Celery).
+# Sin --reload, con usuario sin privilegios y datos persistentes en /data.
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    ML_ARTIFACTS_DIR=/data/ml-artifacts \
+    SISMORA_REPORTS_DIR=/data/reports
+
+RUN useradd --create-home --uid 10001 sismo
+
+WORKDIR /srv/services/api
+COPY services/api/requirements.txt .
+RUN pip install -r requirements.txt
+
+# Misma disposición que el repositorio: la API encuentra `ingestion` y `ml` como hermanos.
+COPY services/api/ /srv/services/api/
+COPY services/ingestion/ /srv/services/ingestion/
+COPY services/ml/ /srv/services/ml/
+COPY infra/prod/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh
+
+RUN chmod 0755 /usr/local/bin/api-entrypoint.sh \
+    && mkdir -p /data/ml-artifacts /data/reports \
+    && chown -R sismo:sismo /data
+
+USER sismo
+EXPOSE 8000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)" || exit 1
+
+ENTRYPOINT ["api-entrypoint.sh"]
+CMD ["api"]

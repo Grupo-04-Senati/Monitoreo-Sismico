@@ -267,3 +267,23 @@ solo se registran los puntos grises.
 - **Descartado:** descargar datos del USGS dentro del CI (lento e inestable) y bloquear
   por avisos de dependencias sin revisarlos.
 
+## D22. Despliegue con Docker Compose, Caddy (HTTPS) y copias diarias verificadas
+
+- **Decisión:** producción en un servidor propio con `infra/prod/docker-compose.yml`:
+  PostgreSQL 16, Redis, API (imagen sin `--reload`, usuario sin privilegios, migra al
+  arrancar), worker y beat de Celery (ingesta programada), Caddy (HTTPS automático con
+  Let's Encrypt, frontend compilado y proxy de `/api` en el mismo dominio, cabeceras de
+  seguridad y CSP) y un contenedor de copias (`pg_dump` diario, verificado con
+  `pg_restore --list`, retención configurable). `restaurar.sh` nunca escribe sobre una
+  base existente y `simulacro_restauracion.sh` restaura en una base temporal y compara
+  migración y tablas. El CI construye las imágenes, levanta todo en modo producción con
+  HTTPS en localhost, hace una prueba de humo y un simulacro de restauración.
+- **Motivo:** PDF §12 y Fase 9 (HTTPS obligatorio, secretos fuera del repositorio,
+  backups automatizados con simulacros de restauración, despliegue documentado).
+- **Costo:** un solo servidor (sin alta disponibilidad). Un proceso de API por defecto
+  porque el límite de intentos de acceso vive en memoria. Las copias quedan en el mismo
+  servidor hasta que la empresa las saque a otro almacenamiento. Los volúmenes de modelos
+  y reportes no entran en la copia de la base.
+- **Descartado:** Kubernetes o servicios administrados (desproporcionados para el MVP) y
+  nginx con certbot (Caddy renueva certificados sin tareas extra).
+

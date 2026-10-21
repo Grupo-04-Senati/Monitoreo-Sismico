@@ -36,3 +36,7 @@ infra/docker/data/
 # Logs
 *.log
 logs/
+
+# Producción: secretos y copias locales
+infra/prod/.env.prod
+infra/prod/backups/
