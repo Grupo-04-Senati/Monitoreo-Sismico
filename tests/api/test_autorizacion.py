@@ -61,8 +61,18 @@ RUTAS_B: list[tuple[str, str, str]] = [
     ("POST", "/api/v1/estimates/x/publish", "rol:admin"),
     ("POST", "/api/v1/estimates/x/withdraw", "rol:admin"),
     ("GET", "/api/v1/alert-rules", "reglas"),
+    ("POST", "/api/v1/alert-rules", "reglas"),
+    ("POST", "/api/v1/alert-rules/simulate", "reglas"),
+    ("GET", "/api/v1/alert-rules/x", "reglas"),
+    ("PUT", "/api/v1/alert-rules/x", "reglas"),
+    ("POST", "/api/v1/alert-rules/x/activate", "rol:admin"),
+    ("POST", "/api/v1/alert-rules/x/deactivate", "reglas"),
     ("GET", "/api/v1/alerts", "alertas"),
     ("POST", "/api/v1/alerts/x/approve", "alertas"),
+    ("GET", "/api/v1/alerts/x", "alertas"),
+    ("POST", "/api/v1/alerts/x/cancel", "alertas"),
+    ("POST", "/api/v1/alerts/x/acknowledge", "alertas"),
+    ("POST", "/api/v1/alerts/x/retry", "alertas"),
     ("GET", "/api/v1/audit-logs", "auditoria"),
 ]
 

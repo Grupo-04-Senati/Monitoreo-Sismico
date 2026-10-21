@@ -127,6 +127,18 @@ registrar_auditoria(
 - Nace `en_revision`; `POST /{id}/publish` y `/{id}/withdraw` solo Administrador. Los
   valores no se modifican ni se borran (trigger). Nunca se envía como alerta.
 
+## 7e. Reglas y centro de alertas
+
+- `/api/v1/alert-rules` (permiso `reglas`): `GET`, `POST`, `GET/PUT /{id}`,
+  `POST /simulate` (`{regla, dias}`, no crea nada), `POST /{id}/deactivate`.
+  `POST /{id}/activate` solo Administrador. Se crean inactivas; editar una activa da 409.
+- `/api/v1/alerts` (permiso `alertas`): `GET` (filtros `estado`, `severidad`, `regla`;
+  paginado), `GET /{id}`, `POST /{id}/approve`, `/cancel` (`{motivo}`), `/acknowledge`,
+  `/retry`. Transición no válida: 409.
+- Cada aviso trae `categoria = "aviso_interno"`, nombre de la regla, resumen del evento y
+  sus entregas (`entregada`, `simulada` o `fallida`). Plantillas con marcadores
+  `{magnitud} {tipo} {lugar} {fecha} {profundidad} {distancia} {zona} {regla} {enlace}`.
+
 ## 8. Datos y estados
 
 - Nada de datos de ejemplo ni valores inventados. Si falta un dato: `null` y la UI muestra

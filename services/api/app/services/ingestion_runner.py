@@ -8,6 +8,7 @@ registro (`ingestion_logs`). Repetir una sincronización no duplica registros.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta
 
@@ -222,7 +223,18 @@ async def sincronizar(
         )
     except Exception as exc:  # noqa: BLE001 - nunca dejar la ejecución colgada
         report = SyncReport(error=f"Error inesperado: {exc}", http_status=0)
-    return await finalizar_ejecucion(db, run, report)
+    run = await finalizar_ejecucion(db, run, report)
+    if report.insertados:
+        # Avisos internos de los eventos de esta ejecución. Un fallo del motor de
+        # alertas nunca debe romper la ingesta: se registra y se sigue.
+        from app.services.alertas_motor import evaluar_insertados_desde
+
+        try:
+            await evaluar_insertados_desde(db, run.started_at)
+        except Exception:  # noqa: BLE001
+            await db.rollback()
+            logging.getLogger("sismo.alertas").exception("Fallo al evaluar reglas tras la ejecución %s", run.id)
+    return run
 
 
 async def ejecutar_sincronizacion(

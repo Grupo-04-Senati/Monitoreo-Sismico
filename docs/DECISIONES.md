@@ -200,3 +200,28 @@ solo se registran los puntos grises.
   dataset. Solo un paso adelante (no varias semanas), para no encadenar estimaciones.
 - **Descartado:** estimar con la regresión lineal didáctica, publicar automáticamente y
   enviar estimaciones como alertas.
+
+## D19. Reglas y centro de alertas: avisos internos con aprobación
+
+- **Decisión:** una regla (magnitud mínima, rango de profundidad, tipos de magnitud, solo
+  revisados y zona: toda la cobertura o un círculo con lat/lon/radio) se crea y edita
+  **inactiva**; solo un Administrador la activa, y cualquiera con el permiso `reglas` la
+  desactiva. Una regla activa no se edita (409): hay que desactivarla y volver a aprobarla.
+  El motor corre tras cada sincronización que inserta eventos; si falla, la ingesta no se
+  revierte (solo se registra el error). Un aviso por evento y regla (restricción única);
+  cooldown medido por la hora del evento (lo que cae dentro queda `suprimida`) y
+  antigüedad máxima (24 h por defecto) para no avisar de sismos viejos al reingestar.
+  Por defecto requiere aprobación: `pendiente_aprobacion → aprobada → enviada | fallida`;
+  también `cancelada` (con motivo) y acuse de recibo. Canales: `app` (siempre entregado)
+  y `email` por SMTP, desactivado por defecto (`ALERT_EMAIL_ENABLED=false`): la entrega
+  queda `simulada`, nunca se finge un envío. Las entregas fallidas se reintentan a mano.
+  Simulación retrospectiva sobre los últimos N días antes de activar.
+- **Motivo:** PDF §6.8 y §6.9. Es una plataforma empresarial privada: los avisos son
+  internos (`categoria = "aviso_interno"`) y la plantilla dice que no es una alerta
+  oficial (IGP/INDECI). La aprobación humana evita avisos falsos por datos preliminares.
+- **Costo:** sin polígonos ni GeoJSON de regiones (solo círculo), sin SMS ni webhooks, sin
+  escalamiento automático ni reintentos programados. Las estimaciones de ML nunca disparan
+  avisos.
+- **Descartado:** activar reglas sin aprobación, enviar correo real por defecto y avisar
+  automáticamente sobre estimaciones.
+

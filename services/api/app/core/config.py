@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     #: Carpeta de artefactos de ML (modelos entrenados). Vacío = `services/ml/artifacts`.
     ML_ARTIFACTS_DIR: str = ""
 
+    #: Correo de avisos internos. Desactivado: la entrega queda como "simulada" (no se envía).
+    ALERT_EMAIL_ENABLED: bool = False
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_TLS: bool = True
+
     @property
     def database_url(self) -> str:
         return (
