@@ -241,6 +241,7 @@ async def entorno(db: AsyncSession) -> dict[str, Any]:
             "intentos_antes_de_bloqueo": login_throttle.MAX_INTENTOS,
             "bloqueo_minutos": login_throttle.BLOQUEO_SEG // 60,
             "intentos_por_ip_por_minuto": login_throttle.MAX_INTENTOS_IP,
+            "almacen": login_throttle.estado()["almacen"],
         },
         "advertencias": advertencias,
     }

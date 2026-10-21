@@ -41,9 +41,8 @@ límite es la CPU de un proceso de Python (un núcleo): sin carga, cada llamada 
 
 ## Recomendaciones
 
-1. **Para más de ~100 usuarios simultáneos**, subir `API_WORKERS` en Linux. Antes hay que
-   mover el límite de intentos de acceso a Redis (hoy vive en memoria de cada proceso:
-   con 4 procesos permitiría 4 veces más intentos; ver D22).
+1. **Para más de ~100 usuarios simultáneos**, subir `API_WORKERS` en Linux (2 por
+   defecto). El límite de intentos de acceso ya se cuenta en Redis y es compartido (D25).
 2. **Caché en el servidor del catálogo compacto** (unos 30 s, invalidada tras cada
    sincronización): es la respuesta más pesada (hasta ~490 KB para 5 años) y se repite
    mucho entre usuarios.

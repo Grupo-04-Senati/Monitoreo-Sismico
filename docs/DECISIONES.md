@@ -325,3 +325,21 @@ solo se registran los puntos grises.
 - **Descartado:** dejar `region` vacía (filtros inútiles), PostGIS (otra dependencia para
   25 polígonos) y asignar por distancia sin mirar el país.
 
+## D25. Límite de intentos de acceso compartido en Redis
+
+- **Decisión:** los contadores del límite de acceso (5 fallos → cuenta bloqueada 15 min;
+  20 intentos por minuto por IP) se guardan en Redis, que producción ya tiene para Celery,
+  así son compartidos entre todos los procesos de la API. `LOGIN_THROTTLE_BACKEND`: `auto`
+  (Redis si responde, si no memoria; por defecto), `redis` (producción) o `memoria`. Si
+  Redis falla en marcha, se cuenta en memoria por proceso (el límite nunca se desactiva),
+  se reintenta Redis cada minuto y el Estado del sistema lo avisa. Los correos se guardan
+  como huella SHA-256. Con esto producción usa `API_WORKERS=2` por defecto.
+- **Motivo:** la prueba de carga (docs/CARGA.md) mostró que un proceso se satura cerca de
+  100–150 usuarios; con el contador en memoria, 4 procesos permitían 4 veces más intentos
+  de adivinar contraseñas (D22).
+- **Costo:** en Redis el bloqueo cuenta desde el primer fallo (ventana fija de 15 min), no
+  una ventana deslizante por intento como en memoria. Sin Redis, el límite vuelve a ser
+  por proceso hasta que Redis responda.
+- **Descartado:** guardar los contadores en PostgreSQL (más escrituras en cada login) y
+  rechazar todos los accesos si Redis cae (dejaría a la empresa sin entrar).
+

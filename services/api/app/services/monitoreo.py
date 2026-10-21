@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.clock import now as clock_now
 from app.core.config import settings
 from app.db.models import Alert, AlertStatus, DataSource, IngestionRun, RunStatus
+from app.services import login_throttle
 
 #: Retraso de la ingesta (en múltiplos de la frecuencia de la fuente) para avisar y para alarmar.
 RETRASO_AVISO = 2
@@ -173,6 +174,24 @@ def _latencia() -> dict[str, Any]:
     return _c("latencia", "Latencia de la API", "ok", texto, **r)
 
 
+def _limite_acceso() -> dict[str, Any]:
+    """Dónde se cuentan los intentos de acceso (D25)."""
+    import os
+
+    est = login_throttle.estado()
+    procesos = int(os.environ.get("API_WORKERS", "1") or 1)
+    nombre = "Límite de intentos de acceso"
+    if est["almacen"] == "redis":
+        return _c("limite_acceso", nombre, "ok", "Contado en Redis, compartido entre procesos.", procesos=procesos, almacen=est["almacen"], motivo=est["detalle"])
+    if procesos > 1:
+        return _c(
+            "limite_acceso", nombre, "aviso",
+            f"Contado en memoria con {procesos} procesos: cada proceso cuenta por separado. {est['detalle']}.",
+            procesos=procesos, almacen=est["almacen"], motivo=est["detalle"],
+        )
+    return _c("limite_acceso", nombre, "ok", f"En memoria con un solo proceso ({est['detalle']}).", procesos=procesos, almacen=est["almacen"], motivo=est["detalle"])
+
+
 def _copias(ahora: datetime) -> dict[str, Any]:
     carpeta = settings.MONITOREO_BACKUP_DIR
     if not carpeta:
@@ -195,7 +214,7 @@ async def estado(db: AsyncSession) -> dict[str, Any]:
     ahora = clock_now()
     comprobaciones = [await _base_datos(db)]
     comprobaciones += await _ingesta(db, ahora)
-    comprobaciones += [await _ejecuciones(db, ahora), await _avisos(db, ahora), _latencia(), _copias(ahora)]
+    comprobaciones += [await _ejecuciones(db, ahora), await _avisos(db, ahora), _latencia(), _limite_acceso(), _copias(ahora)]
     peor = max((c["estado"] for c in comprobaciones), key=ORDEN.__getitem__)
     general = {"ok": "ok", "sin_datos": "ok", "aviso": "degradado", "critico": "critico"}[peor]
     return {"estado": general, "generado_en": ahora, "comprobaciones": comprobaciones}

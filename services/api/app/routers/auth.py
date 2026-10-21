@@ -71,13 +71,13 @@ async def login(
 ) -> TokenResponse:
     ip = request.client.host if request.client else "desconocida"
 
-    if not permitir_intento_ip(ip):
+    if not await permitir_intento_ip(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Demasiados intentos. Espere un momento e intente de nuevo.",
         )
 
-    restante = segundos_bloqueado(payload.email)
+    restante = await segundos_bloqueado(payload.email)
     if restante > 0:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -89,7 +89,7 @@ async def login(
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(payload.password, user.password_hash):
-        registrar_fallo(payload.email)
+        await registrar_fallo(payload.email)
         registrar_auditoria(
             actor_id=None,
             action="login_fallido",
@@ -107,7 +107,7 @@ async def login(
                 detail="Se requiere un código de verificación (MFA).",
             )
         if not verificar_totp(user.mfa_secret, payload.mfa_code):
-            registrar_fallo(payload.email)
+            await registrar_fallo(payload.email)
             registrar_auditoria(
                 actor_id=user.id,
                 action="login_fallido_mfa",
@@ -135,7 +135,7 @@ async def login(
             detail="Su cuenta no está habilitada.",
         )
 
-    limpiar_intentos(payload.email)
+    await limpiar_intentos(payload.email)
     user.last_login_at = clock_now()
     user.failed_attempts = 0
     user.locked_until = None
