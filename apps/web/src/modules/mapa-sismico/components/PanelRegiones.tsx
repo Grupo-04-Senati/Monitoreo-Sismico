@@ -39,6 +39,7 @@ export default function PanelRegiones({ regiones, total, regionActiva, onRegionC
                 <tr
                   key={r.slug}
                   onClick={() => onRegionClick(r.slug)}
+                  role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {

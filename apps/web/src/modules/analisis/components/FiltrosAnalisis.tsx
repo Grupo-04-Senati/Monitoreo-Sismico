@@ -1,3 +1,4 @@
+import { cloneElement, isValidElement } from "react";
 import type { ReactNode } from "react";
 import { DATA_MIN_DAY, DATA_MAX_DAY } from "@/lib/ancla";
 import type { FiltrosAnalisis, ClaveFiltro, Agrupacion, MetodoCorrelacion, TopRegiones, VariableId, Resolucion, PeriodoAnalisis, TipoFiltro } from "../types";
@@ -46,7 +47,10 @@ export default function FiltrosAnalisis({
     visible(k) ? (
       <div key={k}>
         <label className={label}>{etiqueta}</label>
-        {control}
+        {/* El texto de arriba es visual: el control recibe su nombre accesible aquí. */}
+        {isValidElement<{ "aria-label"?: string }>(control) && !control.props["aria-label"]
+          ? cloneElement(control, { "aria-label": etiqueta })
+          : control}
       </div>
     ) : null;
 

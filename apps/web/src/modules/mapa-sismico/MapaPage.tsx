@@ -169,6 +169,9 @@ export default function MapaPage() {
           role="separator"
           aria-orientation="vertical"
           aria-label="Ajustar el ancho del panel de regiones"
+          aria-valuenow={anchoPanel}
+          aria-valuemin={240}
+          aria-valuemax={640}
           tabIndex={0}
           onPointerDown={dividirPanel}
           onDoubleClick={() => setAnchoPanel(330)}
