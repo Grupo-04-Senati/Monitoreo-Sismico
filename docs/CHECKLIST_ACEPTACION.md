@@ -39,6 +39,7 @@ columna dice qué). Estado al 2026-10-21, versión candidata de la Fase 9.
 - [x] Prueba de carga (`docs/CARGA.md`): un proceso atiende 100 usuarios simultáneos con uso
       realista (p95 676 ms, 0 errores).
 - [x] Límite de intentos de acceso en Redis, compartido entre procesos (D25).
+- [x] Caché del catálogo compacto en el servidor (D26): +60 % de capacidad por proceso.
 - [ ] Repetir la prueba de carga en el servidor Linux de producción y medir el escalado con
       varios procesos.
 - [x] Accesibilidad automática (PDF §13): axe-core con reglas WCAG 2.1 A/AA en 15 pantallas

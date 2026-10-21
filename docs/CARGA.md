@@ -26,6 +26,12 @@ máquina, API como en producción (sin `--reload`), copia de la base real (7 609
 | 10 | agresivo | 1 | 19,9 | 127 ms | 877 ms | 0 | ✔ |
 | 50 | agresivo | 1 | 55,5 | 557 ms | 1 844 ms | 0 | ✘ (saturado) |
 
+**Con la caché del catálogo en el servidor (D26):** 50 usuarios agresivos pasan a
+**88,8 pet/s** (antes 55,5) con p95 de **524 ms** (antes 1 844 ms): ✔. Con 200 usuarios
+realistas el p95 varió entre 3,2 s y 13 s en corridas iguales: los picos de más de 10 s
+son reintentos TCP de Windows con cientos de conexiones locales simultáneas (el servidor
+solo necesita ~30 pet/s en ese escenario y atiende ~89). Se repetirá en Linux.
+
 **Conclusión:** un proceso de la API atiende con holgura **100 usuarios simultáneos** con
 uso realista (p95 < 0,7 s) y no da errores ni con 200: se vuelve lenta, no se cae. El
 límite es la CPU de un proceso de Python (un núcleo): sin carga, cada llamada tarda
@@ -43,9 +49,7 @@ límite es la CPU de un proceso de Python (un núcleo): sin carga, cada llamada 
 
 1. **Para más de ~100 usuarios simultáneos**, subir `API_WORKERS` en Linux (2 por
    defecto). El límite de intentos de acceso ya se cuenta en Redis y es compartido (D25).
-2. **Caché en el servidor del catálogo compacto** (unos 30 s, invalidada tras cada
-   sincronización): es la respuesta más pesada (hasta ~490 KB para 5 años) y se repite
-   mucho entre usuarios.
+2. ~~Caché en el servidor del catálogo compacto~~: hecho (D26), +60 % de capacidad.
 3. Repetir esta prueba en el servidor de producción antes de abrir el sistema a toda la
    empresa y después de cambios grandes.
 

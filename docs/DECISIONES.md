@@ -343,3 +343,18 @@ solo se registran los puntos grises.
 - **Descartado:** guardar los contadores en PostgreSQL (más escrituras en cada login) y
   rechazar todos los accesos si Redis cae (dejaría a la empresa sin entrar).
 
+## D26. Caché corta del catálogo compacto en el servidor
+
+- **Decisión:** `GET /events/compact` guarda la respuesta ya serializada 30 s por
+  combinación de filtros (máximo 16, en memoria de cada proceso). La clave incluye la hora
+  de la última ejecución de ingesta terminada: en cuanto el worker termina una
+  sincronización, la caché deja de servir lo anterior aunque corra en otro proceso.
+- **Motivo:** la prueba de carga mostró que es la respuesta más pesada y la más repetida.
+  Con la caché, un proceso pasa de 55 a 89 peticiones por segundo y el p95 del escenario
+  agresivo de 1,8 s a 0,5 s (docs/CARGA.md).
+- **Costo:** `generated_at` puede tener hasta 30 s; los datos no, porque cambian solo con
+  una sincronización. Cada proceso tiene su caché (hasta 16 respuestas, ~40 MB en el peor
+  caso con el catálogo completo). Una consulta mínima extra por petición (última ejecución).
+- **Descartado:** caché en Redis (serializar y transferir 2 MB cuesta casi lo mismo que
+  recalcular) e invalidar por tiempo largo sin mirar las sincronizaciones.
+

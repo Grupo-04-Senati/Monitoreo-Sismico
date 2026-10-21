@@ -10,13 +10,14 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import require_permission
 from app.db.database import get_db
 from app.db.models import User
 from app.schemas.eventos import EventDetailOut, EventGeoJSONOut, EventListOut
+from app.services import cache_catalogo
 from app.services.events import listar_eventos, listar_eventos_compacto, listar_eventos_geojson, obtener_evento
 
 router = APIRouter()
@@ -76,27 +77,19 @@ async def compacto(
     q: str | None = Query(default=None, max_length=80),
     db: AsyncSession = Depends(get_db),
     _: User = _VER,
-) -> JSONResponse:
+) -> Response:
     """Catálogo completo filtrado en filas compactas `{columnas, filas, total}`.
 
     Mismos filtros y valores que `GET /events`, sin paginar y ordenado por fecha
     descendente. Se devuelve tal cual (sin validar fila por fila) por rendimiento.
     """
-    return JSONResponse(
-        await listar_eventos_compacto(
-            db,
-            desde=desde,
-            hasta=hasta,
-            mag_min=mag_min,
-            mag_max=mag_max,
-            mag_type=mag_type,
-            depth_min=depth_min,
-            depth_max=depth_max,
-            region=region,
-            review_status=review_status,
-            q=q,
-        )
-    )
+    filtros = {
+        "desde": desde, "hasta": hasta, "mag_min": mag_min, "mag_max": mag_max, "mag_type": mag_type,
+        "depth_min": depth_min, "depth_max": depth_max, "region": region, "review_status": review_status, "q": q,
+    }
+    # Caché corta en el servidor, que se renueva tras cada sincronización (D26).
+    cuerpo = await cache_catalogo.obtener(db, filtros, lambda: listar_eventos_compacto(db, **filtros))
+    return Response(content=cuerpo, media_type="application/json")
 
 
 @router.get("/geojson", response_model=EventGeoJSONOut)
