@@ -36,7 +36,8 @@ En el frontend, los módulos de B están como **`ModuleStub`** (placeholder). Es
   `analytics/timeseries`+`/summary`, `sources` (+runs/quality/logs/sync/config),
   `reports` (+types/detail/download), `users` (+summary/approve/suspend/reactivate/activity).
 - **Ingesta** (`services/ingestion`): motor con reintentos/backoff, validación y
-  normalizador IGP; persistencia **idempotente** por `(source_id, external_id)`.
+  conector y normalizador del **USGS** (fuente real, D15) y normalizador IGP; persistencia
+  **idempotente** por `(source_id, external_id)`.
 - **Base de datos**: migraciones Alembic `0001`→`0009` con **una sola cabeza**
   (`alembic heads` = `0009_event_source_url`).
 - **Frontend**: los 7 módulos de A + auth, contra la API real, con estados vacíos correctos.
@@ -55,8 +56,10 @@ No las "arregles" sin hablar con el equipo:
 3. **La auditoría va a dos destinos.** `registrar_auditoria(...)` mantiene su **firma
    estable**, emite el log JSON (`sismo.audit`) y guarda en `audit_logs`, tabla de **solo
    inserción** (un trigger rechaza UPDATE/DELETE/TRUNCATE). Ver D6 y D14.
-4. **`PendienteConnector` no llama a ninguna API externa.** El conector real y la fuente
-   única están "por validar" (D1). El normalizador IGP ya está listo para el formato.
+4. **La fuente es el USGS (D15).** `ingestion/fuentes.py` elige el conector por
+   `data_sources.key`; una clave sin proveedor (p. ej. `igp`) usa `PendienteConnector`, que
+   falla con motivo claro en vez de inventar datos. `region` queda vacía: el USGS no da el
+   departamento.
 5. **`source_url` puede ser `null`.** Es la URL de procedencia por evento; si el proveedor
    no la trae, se usa la URL base de la fuente y si no, queda vacía.
 6. **Códigos de rol en inglés** (`admin`, `analyst`, `alert_operator`, `auditor`, `viewer`),

@@ -6,7 +6,7 @@ Usuarios y auth). Rama: `feat/nucleo-mis-modulos`. Etiqueta: `v0.1-nucleo`.
 
 ## 1. Qué está listo
 
-- Backend FastAPI bajo `/api/v1` con los módulos del Dueño A y la ingesta (IGP) integrada.
+- Backend FastAPI bajo `/api/v1` con los módulos del Dueño A y la ingesta del USGS integrada.
 - Base de datos Postgres con migraciones Alembic (una sola cabeza) y **sin datos de ejemplo**.
 - Frontend Vite/React conectado a la API real para los módulos de A.
 - Contraseña de admin solo por consola/`SISMO_ADMIN_PASSWORD`; sin secretos en el repo.
@@ -45,6 +45,10 @@ La API queda en `http://127.0.0.1:8000` (docs en `/api/v1/docs` con `API_DEBUG=t
 ```bash
 # Con la API/BD arriba y el venv activo, desde services/api:
 python -m app.scripts.crear_admin --email admin@tu-dominio.pe
+
+# Primera carga de sismos reales (USGS, últimos 365 días). Sin Redis/Celery, repetirla
+# a mano o con un cron:
+python -m app.scripts.sincronizar
 # La contraseña se pide por consola. En CI: SISMO_ADMIN_PASSWORD=... y el mismo comando.
 ```
 
@@ -89,9 +93,8 @@ npm run build
 - **Auditoría**: `audit_logs` ya persiste (migración `0011`); falta su pantalla, la retención
   configurable y la exportación auditada.
 - **GeoJSON de regiones**: el mapa dibuja "Capa base pendiente" hasta tener geometría real.
-- **Conector real de ingesta**: hoy `PendienteConnector` (no llama a ninguna API externa);
-  el normalizador IGP está listo para el formato del proveedor.
-- **Fuente única**: por validar proveedor y URL reales (hoy `"—"`).
+- **Ingesta**: fuente USGS funcionando (D15). Pendiente: aplicar revisiones de eventos ya
+  guardados, derivar el departamento (`region`) y el IGP como segunda fuente.
 
 ### 4.3 Pruebas faltantes (backlog)
 - [ ] **403 por rol**: cada endpoint protegido devuelve `403 "No tiene permisos..."` cuando

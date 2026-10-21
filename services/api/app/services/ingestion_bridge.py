@@ -14,6 +14,7 @@ ensure_ingestion_on_path()
 
 from ingestion.connectors.pendiente import PendienteConnector  # noqa: E402
 from ingestion.engine import EventRepository, run_sync  # noqa: E402
+from ingestion.fuentes import crear_pipeline  # noqa: E402
 from ingestion.models import NormalizedEvent, SyncReport  # noqa: E402
 from ingestion.normalizers.igp import IgpNormalizer  # noqa: E402
 
@@ -24,4 +25,5 @@ __all__ = [
     "SyncReport",
     "run_sync",
     "EventRepository",
+    "crear_pipeline",
 ]

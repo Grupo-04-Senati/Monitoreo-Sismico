@@ -4,7 +4,7 @@ Decisiones que **difieren del PDF** o que el PDF **no define**. Formato: qué se
 por qué, y qué se descartó. La fuente de verdad funcional sigue siendo el PDF v1.0; aquí
 solo se registran los puntos grises.
 
-## D1. Fuente única (por validar)
+## D1. Fuente única (por validar) — resuelta por D15
 
 - **Decisión:** el sistema parte de **una sola fuente** (IGP) y su nombre/organización/URL
   se configuran por entorno (`VITE_FUENTE_NOMBRE/ORG/URL`), con valor por defecto `"—"`.
@@ -125,3 +125,24 @@ solo se registran los puntos grises.
   debe conectarse con un rol que no sea dueño de las tablas.
 - **Descartado:** cambiar la firma para recibir la sesión (rompe a todos los llamadores) y
   un driver síncrono aparte (bloquearía el bucle de eventos en cada evento).
+
+## D15. Fuente de eventos: USGS
+
+- **Decisión:** la primera fuente real es el catálogo del **USGS** (servicio FDSN, GeoJSON),
+  registrado por la migración `0012_fuente_usgs`. Se piden solo eventos de tipo
+  `earthquake` dentro del recuadro de `ingestion/validation.py`. Primera sincronización:
+  últimos 365 días; luego, desde la última ejecución con 6 h de solape.
+  `reviewed` → "observado", `automatic` → "pendiente de validación".
+- **Motivo:** API pública, sin clave, documentada y estable; deja trabajar con datos reales
+  desde ya. El IGP queda como segunda fuente cuando se verifiquen sus condiciones de uso.
+- **Limitaciones conocidas:**
+  - `region` (departamento) queda vacía: el USGS no la entrega. Se podrá derivar cuando haya
+    una capa geográfica oficial de departamentos (ver D3).
+  - El recuadro incluye zonas fronterizas de países vecinos; `locality` lo indica (texto
+    del USGS, en inglés).
+  - La ingesta solo inserta: si el USGS revisa un evento después (magnitud, estado), el
+    cambio no se aplica todavía. Queda como mejora.
+  - Profundidades negativas (sobre el nivel del mar) se rechazan por la regla de
+    profundidad; quedan en el registro de la ejecución.
+- **Descartado:** esperar al IGP para tener datos (bloqueaba el resto del plan) y usar un
+  conjunto de datos de ejemplo.
