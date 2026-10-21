@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 
 # Permite importar `app` (services/api) sin empaquetarlo.
 _ROOT = Path(__file__).resolve().parents[2]
@@ -101,7 +102,18 @@ class _UsuarioSimulado:
 
 
 @pytest.fixture
-def cliente():
+def cliente(monkeypatch):
+    # La matriz ejecuta las rutas permitidas: se neutralizan los efectos que no
+    # deben ocurrir en una prueba (auditar exportaciones o purgar la auditoría).
+    import app.routers.auditoria as router_auditoria
+    import app.services.configuracion as configuracion
+
+    async def _sin_purga(*_a, **_k):
+        raise HTTPException(status_code=409, detail="purga desactivada en la prueba")
+
+    monkeypatch.setattr(router_auditoria, "registrar_auditoria", lambda **_k: None)
+    monkeypatch.setattr(configuracion, "registrar_auditoria", lambda **_k: None)
+    monkeypatch.setattr(configuracion, "purgar", _sin_purga)
     # Sin propagar errores del servidor: la matriz solo mira la autorización, y
     # un módulo que necesita la base puede responder 500 si no hay PostgreSQL.
     with TestClient(app, raise_server_exceptions=False) as c:
