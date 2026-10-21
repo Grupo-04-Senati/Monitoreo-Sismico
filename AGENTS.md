@@ -38,7 +38,7 @@ Sistema de monitoreo sísmico ML"* v1.0.
 ## Contratos
 
 - `registrar_auditoria(actor_id, action, entity_type, entity_id, before, after, correlation_id)`:
-  mantener la firma; hoy escribe log JSON; B la persistirá en `audit_logs`.
+  mantener la firma; escribe log JSON y guarda en `audit_logs` (solo inserción).
 - Respuestas paginadas: `items, total, page, page_size`. Errores sin datos sensibles.
 - Migraciones: una sola cabeza (`alembic heads`). Si hay dos, `alembic merge`.
 

@@ -86,7 +86,8 @@ npm run build
   `permissions.py`, `models.py`).
 
 ### 4.2 Pendientes del núcleo / dependencias externas
-- **`audit_logs`**: la auditoría se emite como log JSON; falta la tabla (módulo Auditoría).
+- **Auditoría**: `audit_logs` ya persiste (migración `0011`); falta su pantalla, la retención
+  configurable y la exportación auditada.
 - **GeoJSON de regiones**: el mapa dibuja "Capa base pendiente" hasta tener geometría real.
 - **Conector real de ingesta**: hoy `PendienteConnector` (no llama a ninguna API externa);
   el normalizador IGP está listo para el formato del proveedor.

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
@@ -6,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.correlacion import correlation_id_actual
 from app.db.database import get_db
 from app.db.models import IngestionRun, SeismicEvent
 from app.routers import (
@@ -24,8 +27,18 @@ from app.routers import (
     usuarios,
     auditoria,
 )
+from app.services.audit import esperar_auditoria
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    # No perder eventos de auditoría que aún se están escribiendo al apagar.
+    await esperar_auditoria()
+
 
 app = FastAPI(
+    lifespan=lifespan,
     title="Sistema de Monitoreo Sísmico API",
     version="0.1.0",
     description="API para monitoreo de eventos sísmicos, análisis y alertas",
@@ -45,7 +58,11 @@ async def correlation_id_middleware(request: Request, call_next):
     """Propaga un identificador de correlación para trazar cada petición."""
     correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
     request.state.correlation_id = correlation_id
-    response = await call_next(request)
+    token = correlation_id_actual.set(correlation_id)
+    try:
+        response = await call_next(request)
+    finally:
+        correlation_id_actual.reset(token)
     response.headers["X-Correlation-ID"] = correlation_id
     return response
 
