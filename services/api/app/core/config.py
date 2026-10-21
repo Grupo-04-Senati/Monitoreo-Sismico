@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     #: Frecuencia de la ingesta programada (minutos).
     INGESTION_INTERVAL_MINUTES: int = 15
 
+    #: Carpeta de artefactos de ML (modelos entrenados). Vacío = `services/ml/artifacts`.
+    ML_ARTIFACTS_DIR: str = ""
+
     @property
     def database_url(self) -> str:
         return (

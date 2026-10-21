@@ -504,3 +504,90 @@ class DatasetEvent(Base):
     #: "entrenamiento" | "prueba" | None (sin partición).
     split: Mapped[str | None] = mapped_column(String(16))
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# Modelos de Machine Learning (módulo 6.6)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class ExperimentStatus(str):
+    COMPLETADO = "completado"
+    FALLIDO = "fallido"
+
+
+class MLExperiment(Base):
+    """Experimento de ML (PDF §7 `ml_experiments`).
+
+    Guarda todo lo necesario para reproducirlo: dataset (aprobado e inmutable),
+    variables, objetivo, parámetros, semilla, versiones de librerías, partición y
+    métricas en prueba. Un experimento fallido también queda, con su motivo.
+    """
+
+    __tablename__ = "ml_experiments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    #: "conteo_semanal" | "regresion_lineal"
+    task_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: Modelo con menor MAE en prueba (puede ser una referencia).
+    algorithm: Mapped[str | None] = mapped_column(String(64))
+    dataset_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("datasets.id", ondelete="RESTRICT"), nullable=False
+    )
+    feature_spec: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    target_name: Mapped[str | None] = mapped_column(String(64))
+    params: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    metrics: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    validation_spec: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    #: Mejora frente a referencias, coeficientes y serie real-vs-estimada.
+    results: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    limitations: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    library_versions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    error: Mapped[str | None] = mapped_column(String(500))
+    artifact_uri: Mapped[str | None] = mapped_column(String(255))
+    created_by: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint("status IN ('completado', 'fallido')", name="ck_ml_experiments_status"),
+        Index("ix_ml_experiments_created_at", "created_at"),
+        Index("ix_ml_experiments_dataset", "dataset_id"),
+    )
+
+
+class ModelRegistry(Base):
+    """Modelo aprobado (PDF §7 `model_registry`). Solo un modelo aprobado puede
+    publicar estimaciones. Se versiona por nombre de experimento."""
+
+    __tablename__ = "model_registry"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    experiment_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ml_experiments.id", ondelete="RESTRICT"), nullable=False, unique=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="aprobado")
+    approved_by: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: Limitaciones visibles del modelo (PDF §8, agregado "ficha del modelo").
+    limitations: Mapped[str] = mapped_column(String(2000), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_model_registry_name_version"),
+        CheckConstraint("status IN ('aprobado', 'retirado')", name="ck_model_registry_status"),
+    )
+
