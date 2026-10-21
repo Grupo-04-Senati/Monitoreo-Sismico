@@ -88,8 +88,9 @@ npm run build
 - **Auditoría**: tabla y `GET /audit-logs` listos (D14); falta la pantalla.
 - **Modelos ML**: API y pantalla listas (`/api/v1/ml`, D17).
 - **Estimaciones**: API y pantalla listas (`/api/v1/estimates`, D18).
-- **Reglas y Centro de alertas**: API lista (`/api/v1/alert-rules`, `/api/v1/alerts`,
-  D19); falta la pantalla. Correo SMTP desactivado por defecto (entregas `simulada`).
+- **Reglas y Centro de alertas**: API y pantallas listas (`/api/v1/alert-rules`,
+  `/api/v1/alerts`, D19). Correo SMTP desactivado por defecto (entregas `simulada`). El
+  Dashboard muestra los avisos por atender (`active_alerts`).
 - Pendiente (hoy `ModuleStub`): Configuración.
 - No tocar sin avisar; el núcleo ya deja los puntos de integración (`registrar_auditoria`,
   `permissions.py`, `models.py`).

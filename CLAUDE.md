@@ -25,7 +25,7 @@ Hay **dos dueños**. No invadas la parte del otro.
 | Dueño | Módulos | Estado |
 |---|---|---|
 | **A** (hecho) | Dashboard, Eventos, Mapa, Análisis, Fuentes, Reportes, Usuarios y roles, auth | **Implementado y conectado a la API real** |
-| **B (tú)** | Preparación de datos, Modelos ML, Estimaciones, Reglas de alertas, Centro de alertas, Auditoría, Configuración | **Vacíos a propósito**: `ModuleStub` en el frontend y routers vacíos en el backend |
+| **B (tú)** | Preparación de datos, Modelos ML, Estimaciones, Reglas de alertas, Centro de alertas, Auditoría, Configuración | Hechos salvo la pantalla de Auditoría y Configuración (`ModuleStub`); ver §8 |
 
 En el frontend, los módulos de B están como **`ModuleStub`** (placeholder). Eso es
 **intencional**, no un error ni "falta de código".
@@ -104,9 +104,8 @@ incluye los comandos de verificación y la lista de **pruebas pendientes**:
 
 ## 8. Qué te toca a ti (Dueño B)
 
-1. Preparación de datos, Modelos ML y Estimaciones están completos. Reglas y Centro de
-   alertas tienen API (falta su pantalla); Auditoría tiene API (falta su pantalla);
-   Configuración está en blanco. Ver `docs/HANDOFF.md` §4.1.
+1. Preparación de datos, Modelos ML, Estimaciones y Reglas/Centro de alertas están
+   completos. Auditoría tiene API (falta su pantalla); Configuración está en blanco. Ver `docs/HANDOFF.md` §4.1.
 2. ~~Crear la tabla `audit_logs`~~ (hecho, migración `0011`). Falta la pantalla de
    Auditoría, la retención configurable y la exportación auditada.
 3. Nunca presentar una estimación de ML como alerta oficial.

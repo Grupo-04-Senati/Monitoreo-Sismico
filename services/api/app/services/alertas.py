@@ -148,7 +148,7 @@ async def simular(db: AsyncSession, payload: ReglaIn, dias: int) -> dict:
         "alertas": alertas,
         "suprimidas_por_cooldown": suprimidas,
         "ejemplos": list(reversed(ejemplos))[:EJEMPLOS_SIMULACION],
-        "nota": "Simulación sobre eventos ya ocurridos: no crea avisos ni ignora la antigüedad máxima al activarse.",
+        "nota": "Simulación sobre sismos ya ocurridos: no crea avisos. Ya activa, la regla solo avisa de sismos más recientes que su antigüedad máxima.",
     }
 
 

@@ -821,14 +821,14 @@ export default function DashboardPage() {
           hint={data.fuente?.nombre ?? "Sin datos de fuente"}
         />
         <Kpi
-          label="Alertas sísmicas activas"
+          label="Avisos internos por atender"
           value={seismicActive != null ? String(seismicActive) : "—"}
           hint={
             seismicActive != null
               ? seismicActive > 0
-                ? `${seismicActive} pendientes de envío`
-                : "Sin alertas vigentes"
-              : "Pendiente de backend"
+                ? "Por aprobar o con entrega fallida"
+                : "Ninguno pendiente"
+              : "Sin datos"
           }
         />
         <Kpi
