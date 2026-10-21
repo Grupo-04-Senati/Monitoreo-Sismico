@@ -28,6 +28,8 @@ export default function AreaChart({ data, height = 200, fill = false, ariaLabel 
   const maxV = Math.max(...data.map((d) => d.value), 1);
   const { top, ticks } = niceScale(maxV);
   const n = data.length;
+  /** Cada cuántos puntos se rotula el eje X (como máximo ~8 etiquetas). */
+  const pasoEtiquetas = Math.max(1, Math.ceil(n / 8));
 
   /* Coordenadas en % (independientes de la altura real del contenedor) */
   const fx = (i: number) => ((i + 0.5) / n) * 100;
@@ -128,8 +130,9 @@ export default function AreaChart({ data, height = 200, fill = false, ariaLabel 
         <div className="w-8 shrink-0" />
         <div className="flex-1 min-w-0 flex">
           {data.map((d, i) => (
-            <span key={i} className="flex-1 min-w-0 text-center text-[9px] leading-tight text-content-muted truncate">
-              {d.label}
+            // Con muchos puntos solo se rotulan ~8, repartidos: si no, las etiquetas se pisan.
+            <span key={i} className="flex-1 min-w-0 overflow-visible whitespace-nowrap text-center text-[9px] leading-tight text-content-muted">
+              {i % pasoEtiquetas === 0 ? d.label : ""}
             </span>
           ))}
         </div>
