@@ -66,6 +66,9 @@ docker compose -f infra/docker/docker-compose.yml up --build
 
 ## 3. Verificaciones (antes de cada PR)
 
+El CI de GitHub (`.github/workflows/ci.yml`, D21) repite esto en cada PR sobre una base
+vacía; conviene correrlo también en local, donde hay datos y corren todas las pruebas.
+
 ```bash
 # Backend
 cd services/api
@@ -104,8 +107,10 @@ npm run build
   guardados, derivar el departamento (`region`) y el IGP como segunda fuente.
 
 ### 4.3 Pruebas faltantes (backlog)
-- [ ] **403 por rol**: cada endpoint protegido devuelve `403 "No tiene permisos..."` cuando
-      el rol no corresponde (probar los 5 roles de `core/permissions.py`).
+- [x] **403 por rol**: matriz de los 5 roles en `tests/api/test_autorizacion.py`.
+- [ ] **Datos en CI**: una semilla pequeña de sismos para que las pruebas de alertas,
+      datasets, ML y estimaciones también corran en GitHub.
+- [ ] **react-router 7**: corrige 2 avisos moderados de `npm audit` (cambio incompatible).
 - [ ] **Idempotencia de sync (extremo a extremo)**: repetir la sincronización contra la BD
       real no duplica filas por `(source_id, external_id)` (hoy probado solo a nivel de motor).
 - [ ] **410 en reportes**: descargar un reporte inexistente/eliminado devuelve `410 Gone`

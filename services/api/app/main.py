@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.correlacion import correlation_id_actual
+from app.core.seguridad import CABECERAS, HSTS, es_produccion, verificar_arranque
 from app.db.database import get_db
 from app.db.models import IngestionRun, SeismicEvent
 from app.routers import (
@@ -34,6 +35,8 @@ from app.services.audit import esperar_auditoria
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # En producción no se arranca con secretos o ajustes de desarrollo (PDF §12).
+    verificar_arranque(settings)
     yield
     # No perder eventos de auditoría que aún se están escribiendo al apagar.
     await esperar_auditoria()
@@ -72,6 +75,10 @@ async def correlation_id_middleware(request: Request, call_next):
     finally:
         correlation_id_actual.reset(token)
     response.headers["X-Correlation-ID"] = correlation_id
+    for nombre, valor in CABECERAS.items():
+        response.headers.setdefault(nombre, valor)
+    if es_produccion(settings):
+        response.headers.setdefault("Strict-Transport-Security", HSTS)
     return response
 
 

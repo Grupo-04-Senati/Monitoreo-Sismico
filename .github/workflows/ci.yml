@@ -1,0 +1,112 @@
+# CI de Monitoreo Sísmico: corre en cada push y en cada pull request.
+#   - backend: migraciones sobre PostgreSQL vacío + toda la suite de pytest.
+#   - frontend: instalación reproducible (package-lock), tipos y build de Vite.
+#   - seguridad: ningún .env versionado; auditoría de dependencias (informativa).
+# Las pruebas que necesitan sismos reales se omiten solas en una base vacía; las de
+# autorización, reglas, seguridad, configuración, ML e ingesta sí corren.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (pytest + migraciones)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sismo
+          POSTGRES_PASSWORD: sismo_ci
+          POSTGRES_DB: sismo_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sismo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: sismo
+      POSTGRES_PASSWORD: sismo_ci
+      POSTGRES_DB: sismo_db
+      API_SECRET_KEY: ci-solo-para-pruebas-no-es-un-secreto-real
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - name: Instalar dependencias
+        run: pip install -r services/api/requirements.txt
+      - name: Migraciones (subir, bajar una y volver a subir)
+        working-directory: services/api
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
+      - name: Cuenta de administrador desechable (contraseña aleatoria por ejecución)
+        working-directory: services/api
+        run: |
+          export SISMO_ADMIN_PASSWORD="Ci#$(openssl rand -hex 16)"
+          python -m app.scripts.crear_admin --email admin-ci@empresa-ejemplo.pe --name "Administrador CI"
+      - name: Pruebas
+        run: python -m pytest tests -q -p no:cacheprovider -rs
+
+  frontend:
+    name: Frontend (tipos + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Instalar dependencias (package-lock)
+        run: npm ci
+      - name: Tipos y build
+        run: npm run build:web
+
+  seguridad:
+    name: Seguridad (secretos y dependencias)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ningún archivo .env versionado
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "::error::Hay un archivo .env en el repositorio: retírelo y rote sus secretos."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Vulnerabilidades conocidas en dependencias de Python (informativo)
+        continue-on-error: true
+        run: |
+          pip install pip-audit
+          pip-audit -r services/api/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Vulnerabilidades conocidas en dependencias de Node (informativo)
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev

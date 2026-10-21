@@ -105,6 +105,7 @@ incluye los comandos de verificación y la lista de **pruebas pendientes**:
 ## 8. Qué te toca a ti (Dueño B)
 
 1. Todos los módulos del Dueño B están completos (API y pantalla). Ver `docs/HANDOFF.md` §4.1.
-2. Lo que sigue es la Fase 9: CI, seguridad y despliegue.
+2. Fase 9: CI y arranque seguro hechos (D21). Faltan despliegue de producción (Docker,
+   HTTPS, backups) y monitoreo con manuales.
 3. Nunca presentar una estimación de ML como alerta oficial.
 4. Si necesitas tocar algo compartido o del Dueño A: abre un issue / avisa, no lo reescribas.

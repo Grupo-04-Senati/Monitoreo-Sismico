@@ -247,3 +247,23 @@ solo se registran los puntos grises.
 - **Descartado:** editar secretos o variables de entorno desde la web, parámetros sin
   efecto real y borrar auditoría sin piso mínimo.
 
+## D21. CI en GitHub Actions y arranque seguro en producción
+
+- **Decisión:** cada push a `main` y cada pull request corren tres trabajos: backend
+  (PostgreSQL 16 vacío, migraciones subir/bajar/subir, cuenta de administrador desechable
+  con contraseña aleatoria por ejecución y toda la suite de pytest), frontend (`npm ci` con
+  el package-lock, tipos y build) y seguridad (ningún `.env` versionado; `pip-audit` y
+  `npm audit` informativos). Con `ENV=production` la API **no arranca** si quedan valores
+  de desarrollo: clave de sesión por defecto o corta, cookies sin `Secure`, contraseña de
+  base por defecto, CORS `*` o con localhost, o `DB_ECHO` activo. Todas las respuestas
+  llevan cabeceras de seguridad (nosniff, sin iframes, Referrer-Policy,
+  Permissions-Policy) y HSTS en producción.
+- **Motivo:** PDF §12 y Fase 9 (pruebas automáticas, revisión de seguridad, secretos fuera
+  del repositorio, HTTPS obligatorio).
+- **Costo:** en CI no hay sismos (la base empieza vacía): las pruebas que los necesitan se
+  omiten solas y siguen corriendo en local. La auditoría de dependencias no bloquea:
+  hoy señala `react-router` 6 (moderada, se corrige con la v7, que rompe compatibilidad).
+  El CI solo bloquea fusiones si se activa la protección de la rama `main` en GitHub.
+- **Descartado:** descargar datos del USGS dentro del CI (lento e inestable) y bloquear
+  por avisos de dependencias sin revisarlos.
+
