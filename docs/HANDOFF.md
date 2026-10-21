@@ -87,7 +87,7 @@ npm run build
 - **Preparación de datos**: API y pantalla listas (`/api/v1/datasets`, D16).
 - **Auditoría**: tabla y `GET /audit-logs` listos (D14); falta la pantalla.
 - **Modelos ML**: API y pantalla listas (`/api/v1/ml`, D17).
-- **Estimaciones**: API lista (`/api/v1/estimates`, D18); falta la pantalla.
+- **Estimaciones**: API y pantalla listas (`/api/v1/estimates`, D18).
 - Pendientes (hoy `ModuleStub` / rutas que responden vacío o 501): Reglas de alertas,
   Centro de alertas, Configuración.
 - No tocar sin avisar; el núcleo ya deja los puntos de integración (`registrar_auditoria`,
