@@ -48,7 +48,8 @@ app = FastAPI(
 # Comprime las respuestas grandes (el catálogo de eventos: ~580 KB → ~110 KB por
 # página de 1000). Además de acelerar la carga, evita los cortes ECONNRESET que el
 # proxy de desarrollo de Vite produce en Windows con cuerpos grandes.
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+# Nivel 6 (el estándar de zlib): casi la misma compresión que 9 en la mitad de tiempo.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 app.add_middleware(
     CORSMiddleware,

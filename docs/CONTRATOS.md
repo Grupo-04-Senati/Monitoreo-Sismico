@@ -21,6 +21,11 @@ Formato estable:
 - `total`: total de coincidencias con el filtro (no de la página).
 - `page` (>= 1), `page_size` (1..1000 en eventos; el frontend pide páginas de 1000).
 
+`GET /api/v1/events/compact` devuelve **todo** el catálogo filtrado (mismos filtros que
+`/events`, sin paginar, orden por fecha descendente) como `{ columnas, filas, total }`:
+cada fila tiene los mismos valores que un `EventOut`. Lo usan las pantallas que agregan
+en el navegador (Dashboard, Mapa, Análisis, Eventos); una prueba garantiza la paridad.
+
 Algunas listas no paginadas (`/sources`, runs, logs) devuelven solo `{ items, total }`.
 Ver `services/api/app/schemas/*.py` (`EventListOut`, `ReportListOut`, `SourceListOut`, ...).
 
