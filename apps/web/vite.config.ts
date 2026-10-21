@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import http from "http";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -22,6 +23,10 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target: proxyTarget,
           changeOrigin: true,
+          // Una conexión nueva por petición. Reutilizarlas (keep-alive) deja en
+          // Windows algunas peticiones colgadas o cortadas (ECONNRESET): medido,
+          // 3 de 16 colgadas con keep-alive frente a 0 de 120 sin él.
+          agent: new http.Agent({ keepAlive: false }),
         },
       },
     },
