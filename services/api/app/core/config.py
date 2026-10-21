@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: str = "lax"
 
     REDIS_URL: str = "redis://redis:6379/0"
+    #: Dónde se cuentan los intentos de acceso: "auto" (Redis si responde, si no memoria),
+    #: "redis" o "memoria". Con varios procesos de API debe ser Redis (D25).
+    LOGIN_THROTTLE_BACKEND: str = "auto"
 
     #: Clave de la fuente única del MVP (mientras no exista la fuente real).
     INGESTION_SOURCE_KEY: str = "igp"

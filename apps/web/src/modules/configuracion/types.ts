@@ -25,7 +25,7 @@ export interface Entorno {
   cookies_seguras: boolean;
   sesion_minutos: number;
   correo: { activado: boolean; configurado: boolean; servidor: string | null; remitente: string | null };
-  acceso: { intentos_antes_de_bloqueo: number; bloqueo_minutos: number; intentos_por_ip_por_minuto: number };
+  acceso: { intentos_antes_de_bloqueo: number; bloqueo_minutos: number; intentos_por_ip_por_minuto: number; almacen: string };
   advertencias: string[];
 }
 

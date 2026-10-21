@@ -20,6 +20,7 @@ export default function PanelEntorno({ entorno: e }: { entorno: Entorno }) {
     ["Remitente", e.correo.remitente ?? "—"],
     ["Bloqueo de acceso", `${e.acceso.intentos_antes_de_bloqueo} intentos fallidos → ${e.acceso.bloqueo_minutos} min`],
     ["Límite por IP", `${e.acceso.intentos_por_ip_por_minuto} intentos por minuto`],
+    ["Conteo de intentos", e.acceso.almacen === "redis" ? "Redis (compartido entre procesos)" : "Memoria del proceso"],
   ];
 
   return (

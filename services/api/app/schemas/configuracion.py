@@ -35,6 +35,8 @@ class AccesoOut(BaseModel):
     intentos_antes_de_bloqueo: int
     bloqueo_minutos: int
     intentos_por_ip_por_minuto: int
+    #: "redis" (compartido entre procesos) o "memoria" (D25).
+    almacen: str = "memoria"
 
 
 class EntornoOut(BaseModel):

@@ -8,7 +8,7 @@ set -eu
 case "${1:-api}" in
   api)
     alembic upgrade head
-    # Un proceso por defecto: el límite de intentos de acceso vive en memoria (ver D22).
+    # El límite de intentos de acceso se cuenta en Redis: varios procesos son seguros (D25).
     exec uvicorn app.main:app --host 0.0.0.0 --port 8000 \
       --workers "${API_WORKERS:-1}" --proxy-headers --forwarded-allow-ips="*"
     ;;

@@ -92,6 +92,7 @@ Administrador) y `GET /health/ready` para monitores externos (200 si la base res
 | Ejecuciones de ingesta | sin fallos en 24 h | fallidas o colgadas > 30 min | — |
 | Avisos internos | sin entregas fallidas ni esperas largas | entregas fallidas o pendientes > 60 min | — |
 | Latencia de la API | p95 ≤ 1000 ms y sin 5xx | p95 mayor o errores 5xx | — |
+| Límite de intentos de acceso | en Redis, o en memoria con un proceso | en memoria con varios procesos | — |
 | Copias de seguridad | última ≤ 26 h | ≤ 50 h | más, o ninguna |
 
 La latencia se mide en el proceso de la API desde su último arranque (últimas 2000

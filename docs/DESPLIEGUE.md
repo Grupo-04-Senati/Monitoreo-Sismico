@@ -146,8 +146,9 @@ sincronización del USGS.
 
 ## 6. Límites conocidos
 
-- Un proceso de API por defecto (`API_WORKERS=1`): el límite de intentos de acceso vive
-  en memoria. Para escalar, mover ese contador a Redis antes de subir los procesos.
+- `API_WORKERS=2` por defecto. El límite de intentos de acceso se cuenta en Redis
+  (`LOGIN_THROTTLE_BACKEND=redis`, D25), compartido entre procesos. Si Redis cae, se
+  cuenta en memoria por proceso y el Estado del sistema lo avisa.
 - Los modelos de ML y los reportes viven en volúmenes (`ml-artifacts`, `reports`) que la
   copia de PostgreSQL no incluye: los modelos se pueden reentrenar con el dataset y la
   semilla guardados; los reportes son temporales.
