@@ -247,3 +247,43 @@ solo se registran los puntos grises.
 - **Descartado:** editar secretos o variables de entorno desde la web, parámetros sin
   efecto real y borrar auditoría sin piso mínimo.
 
+## D21. CI en GitHub Actions y arranque seguro en producción
+
+- **Decisión:** cada push a `main` y cada pull request corren tres trabajos: backend
+  (PostgreSQL 16 vacío, migraciones subir/bajar/subir, cuenta de administrador desechable
+  con contraseña aleatoria por ejecución y toda la suite de pytest), frontend (`npm ci` con
+  el package-lock, tipos y build) y seguridad (ningún `.env` versionado; `pip-audit` y
+  `npm audit` informativos). Con `ENV=production` la API **no arranca** si quedan valores
+  de desarrollo: clave de sesión por defecto o corta, cookies sin `Secure`, contraseña de
+  base por defecto, CORS `*` o con localhost, o `DB_ECHO` activo. Todas las respuestas
+  llevan cabeceras de seguridad (nosniff, sin iframes, Referrer-Policy,
+  Permissions-Policy) y HSTS en producción.
+- **Motivo:** PDF §12 y Fase 9 (pruebas automáticas, revisión de seguridad, secretos fuera
+  del repositorio, HTTPS obligatorio).
+- **Costo:** en CI no hay sismos (la base empieza vacía): las pruebas que los necesitan se
+  omiten solas y siguen corriendo en local. La auditoría de dependencias no bloquea:
+  hoy señala `react-router` 6 (moderada, se corrige con la v7, que rompe compatibilidad).
+  El CI solo bloquea fusiones si se activa la protección de la rama `main` en GitHub.
+- **Descartado:** descargar datos del USGS dentro del CI (lento e inestable) y bloquear
+  por avisos de dependencias sin revisarlos.
+
+## D22. Despliegue con Docker Compose, Caddy (HTTPS) y copias diarias verificadas
+
+- **Decisión:** producción en un servidor propio con `infra/prod/docker-compose.yml`:
+  PostgreSQL 16, Redis, API (imagen sin `--reload`, usuario sin privilegios, migra al
+  arrancar), worker y beat de Celery (ingesta programada), Caddy (HTTPS automático con
+  Let's Encrypt, frontend compilado y proxy de `/api` en el mismo dominio, cabeceras de
+  seguridad y CSP) y un contenedor de copias (`pg_dump` diario, verificado con
+  `pg_restore --list`, retención configurable). `restaurar.sh` nunca escribe sobre una
+  base existente y `simulacro_restauracion.sh` restaura en una base temporal y compara
+  migración y tablas. El CI construye las imágenes, levanta todo en modo producción con
+  HTTPS en localhost, hace una prueba de humo y un simulacro de restauración.
+- **Motivo:** PDF §12 y Fase 9 (HTTPS obligatorio, secretos fuera del repositorio,
+  backups automatizados con simulacros de restauración, despliegue documentado).
+- **Costo:** un solo servidor (sin alta disponibilidad). Un proceso de API por defecto
+  porque el límite de intentos de acceso vive en memoria. Las copias quedan en el mismo
+  servidor hasta que la empresa las saque a otro almacenamiento. Los volúmenes de modelos
+  y reportes no entran en la copia de la base.
+- **Descartado:** Kubernetes o servicios administrados (desproporcionados para el MVP) y
+  nginx con certbot (Caddy renueva certificados sin tareas extra).
+

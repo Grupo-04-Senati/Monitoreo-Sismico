@@ -1,0 +1,16 @@
+# Contexto de las imágenes de producción (infra/prod): solo el código necesario.
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+services/ml/artifacts
+infra/prod/backups
+tests
+docs
+database
