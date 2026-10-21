@@ -18,6 +18,8 @@ ensure_ingestion_on_path()
 import ml  # noqa: E402
 from ml.training import conteo_semanal, regresion_lineal  # noqa: E402
 from ml.training.base import ErrorEntrenamiento, Resultado, versiones  # noqa: E402
+from ml.features.conteo_semanal import conteos_semanales, inicio_semana  # noqa: E402
+from ml.inference import conteo_semanal as inferencia_conteo  # noqa: E402
 
 
 def carpeta_artefactos() -> Path:
@@ -34,4 +36,7 @@ __all__ = [
     "Resultado",
     "versiones",
     "carpeta_artefactos",
+    "conteos_semanales",
+    "inicio_semana",
+    "inferencia_conteo",
 ]

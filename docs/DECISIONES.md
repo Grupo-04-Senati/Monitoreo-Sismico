@@ -182,3 +182,21 @@ solo se registran los puntos grises.
   cambiar las tablas. No hay clasificación todavía.
 - **Descartado:** partición aleatoria (fuga de información), aprobar una referencia como
   si fuera un modelo y prometer predicción de sismos.
+
+## D18. Estimaciones: semana en curso, intervalo empírico y revisión
+
+- **Decisión:** solo un modelo aprobado de conteo semanal estima. Se estima la semana en
+  curso (lunes a lunes, UTC) con las 12 semanas completas anteriores del catálogo actual,
+  contadas con las mismas reglas de limpieza del dataset del modelo. El intervalo del
+  90 % sale de los errores reales del modelo en su partición de prueba (cuantiles 5–95 %),
+  no de una fórmula de Poisson. Junto al valor se guarda la referencia (media histórica),
+  las entradas y advertencias (semana sin terminar, datos desactualizados, intervalo
+  demasiado ancho). Nace "en revisión"; solo un Administrador publica o retira. Los
+  valores no se modifican ni se borran (trigger).
+- **Motivo:** PDF §6.7 y §7 (modelo y versión, incertidumbre, fecha, advertencia, estado
+  de revisión, no mezclar con eventos observados). Con réplicas, un intervalo teórico de
+  Poisson sería engañosamente estrecho.
+- **Costo:** sin zonas (la fuente no da el departamento): la unidad es la cobertura del
+  dataset. Solo un paso adelante (no varias semanas), para no encadenar estimaciones.
+- **Descartado:** estimar con la regresión lineal didáctica, publicar automáticamente y
+  enviar estimaciones como alertas.
