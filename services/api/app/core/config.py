@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "sismo_db"
     POSTGRES_HOST: str = "db"
     POSTGRES_PORT: int = 5432
+    #: Imprime cada consulta SQL con sus valores (incluye hashes y secretos).
+    #: Independiente de API_DEBUG; activar solo para depurar SQL en local.
+    DB_ECHO: bool = False
 
     API_SECRET_KEY: str = "dev-secret-change-me"
     API_DEBUG: bool = True
