@@ -32,7 +32,7 @@ Sistema de monitoreo sísmico ML"* v1.0.
 - Roles (códigos): `admin`, `analyst`, `alert_operator`, `auditor`, `viewer`. Nombres en
   pantalla en español. Permisos en `core/permissions.py`.
 - Secretos solo en variables de entorno. Nada en el repo.
-- Hora en UTC en BD, UTC-5 en la UI. Fuente única (por validar).
+- Hora en UTC en BD, UTC-5 en la UI. Fuente: USGS (D15).
 - Colores: sin rojo/ámbar/verde que sugiera peligro.
 
 ## Contratos

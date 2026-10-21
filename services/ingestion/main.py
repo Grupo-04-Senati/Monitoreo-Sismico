@@ -5,8 +5,8 @@ motor y la validación funcionan:
 
     python services/ingestion/main.py
 
-La fuente real todavía no está implementada, por lo que el conector reporta un
-error controlado. La ingesta real (persistencia, ejecuciones y registro) la
+Consulta el USGS de verdad (últimas 3 horas, más el solape del conector) pero
+no guarda nada. La ingesta real (persistencia, ejecuciones y registro) la
 orquesta `services/api/app/services/ingestion_runner.py`, que reutiliza este
 paquete.
 """
@@ -20,9 +20,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ingestion.connectors.pendiente import PendienteConnector  # noqa: E402
 from ingestion.engine import run_sync  # noqa: E402
-from ingestion.normalizers.igp import IgpNormalizer  # noqa: E402
+from ingestion.fuentes import crear_pipeline  # noqa: E402
 
 
 class _RepoNulo:
@@ -40,9 +39,10 @@ class _RepoNulo:
 
 async def _demo() -> None:
     sina = datetime.now(timezone.utc) - timedelta(hours=3)
+    connector, normalizer = crear_pipeline("usgs")
     report = await run_sync(
-        connector=PendienteConnector(),
-        normalizer=IgpNormalizer("igp"),
+        connector=connector,
+        normalizer=normalizer,
         repository=_RepoNulo(),
         since=sina,
     )

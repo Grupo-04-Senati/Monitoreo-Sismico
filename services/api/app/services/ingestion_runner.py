@@ -1,6 +1,6 @@
 """Sincronización de fuentes: puente entre el motor de ingesta y la base de datos.
 
-Crea la ejecución (`ingestion_runs`), inyecta el conector simulado y persiste los
+Crea la ejecución (`ingestion_runs`), elige el conector de la fuente y persiste los
 eventos de forma **idempotente** mediante `INSERT ... ON CONFLICT DO NOTHING`
 sobre `(source_id, external_id)`. Al terminar actualiza la ejecución y escribe el
 registro (`ingestion_logs`). Repetir una sincronización no duplica registros.
@@ -20,10 +20,9 @@ from app.core.clock import now as clock_now
 from app.db.database import AsyncSessionLocal
 from app.db.models import DataSource, IngestionLog, IngestionRun, RunStatus, SeismicEvent
 from app.services.ingestion_bridge import (
-    IgpNormalizer,
     NormalizedEvent,
-    PendienteConnector,
     SyncReport,
+    crear_pipeline,
     run_sync,
 )
 
@@ -202,10 +201,13 @@ async def sincronizar(
     """Ejecuta la sincronización completa (conector → normalizador → BD)."""
     since = await _marca_incremental(db, source.id)
     repo = RepositorioEventos(db, source.id)
+    connector, normalizer = crear_pipeline(
+        source.key, url_api=source.url_api, timeout_sec=source.timeout_sec, ahora=clock_now
+    )
     try:
         report = await run_sync(
-            connector=PendienteConnector(),
-            normalizer=IgpNormalizer(source.key),
+            connector=connector,
+            normalizer=normalizer,
             repository=repo,
             since=since,
             retries=source.retries,

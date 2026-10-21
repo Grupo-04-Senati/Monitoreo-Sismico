@@ -3,9 +3,10 @@
 Empaqueta la lógica **pura** de ingesta (conector → normalizador → motor) sin
 depender del framework ni de la base de datos:
 
-    ingestion.connectors   → de dónde salen los datos (fuente real pendiente)
+    ingestion.connectors   → de dónde salen los datos (USGS; IGP pendiente)
     ingestion.normalizers  → cómo se validan y mapean a `NormalizedEvent`
     ingestion.engine       → orquesta la sincronización y reporta el resultado
+    ingestion.fuentes      → qué conector y normalizador usa cada fuente
 
 La capa de persistencia (SQLAlchemy) y los endpoints viven en `services/api`,
 que reutiliza este paquete. Al integrar la fuente real basta con implementar un
