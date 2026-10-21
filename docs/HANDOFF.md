@@ -86,7 +86,7 @@ npm run build
 ### 4.1 Módulos del Dueño B
 - **Preparación de datos**: API y pantalla listas (`/api/v1/datasets`, D16).
 - **Auditoría**: tabla y `GET /audit-logs` listos (D14); falta la pantalla.
-- **Modelos ML**: API lista (`/api/v1/ml`, D17); falta la pantalla.
+- **Modelos ML**: API y pantalla listas (`/api/v1/ml`, D17).
 - Pendientes (hoy `ModuleStub` / rutas que responden vacío o 501): Estimaciones,
   Reglas de alertas, Centro de alertas, Configuración.
 - No tocar sin avisar; el núcleo ya deja los puntos de integración (`registrar_auditoria`,
