@@ -27,6 +27,7 @@ import getpass
 import os
 import sys
 
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import func, select
 
 from app.core.security import hash_password
@@ -37,6 +38,16 @@ from app.services.audit import registrar_auditoria
 
 #: Variable de entorno usada en entornos no interactivos.
 ENV_PASSWORD = "SISMO_ADMIN_PASSWORD"
+
+
+def _validar_email(email: str) -> None:
+    """Misma validación que el login (`EmailStr`): si el login rechaza el correo,
+    la cuenta creada aquí no podría iniciar sesión (p. ej. dominios `.local`)."""
+    try:
+        TypeAdapter(EmailStr).validate_python(email.strip())
+    except ValidationError as exc:
+        motivo = exc.errors()[0].get("ctx", {}).get("reason", "formato no válido")
+        raise SystemExit(f"Correo invalido: {motivo}") from exc
 
 
 def _leer_password() -> str:
@@ -135,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--role", default="admin", help="Nombre del rol a asignar (por defecto: admin).")
     parser.add_argument("--force", action="store_true", help="Restablecer si el correo ya existe.")
     args = parser.parse_args(argv)
+    _validar_email(args.email)
     args.password = _leer_password()
     try:
         return asyncio.run(_crear(args))
