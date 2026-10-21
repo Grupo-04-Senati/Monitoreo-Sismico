@@ -15,6 +15,9 @@ Usuarios y auth). Rama: `feat/nucleo-mis-modulos`. Etiqueta: `v0.1-nucleo`.
   HTTPS y copias (D22, `docs/DESPLIEGUE.md`), monitoreo (D23), `docs/MANUAL_TECNICO.md` y
   `docs/CHECKLIST_ACEPTACION.md`.
 
+**Demostración:** `docs/GUION_DEMO.md` (recorrido de todas las funciones) y
+`python -m app.scripts.preparar_demo estado|cuentas|avisos`.
+
 ## 2. Cómo levantar todo
 
 ### Requisitos
