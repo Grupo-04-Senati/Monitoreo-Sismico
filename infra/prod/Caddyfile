@@ -17,7 +17,7 @@
 		reverse_proxy api:8000
 	}
 
-	handle /health {
+	handle /health* {
 		reverse_proxy api:8000
 	}
 

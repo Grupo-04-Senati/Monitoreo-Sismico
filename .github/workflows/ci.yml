@@ -144,6 +144,7 @@ jobs:
         run: |
           set -e
           curl -kfsS https://localhost/health
+          curl -kfsS https://localhost/health/ready | grep -q '"ok"'
           curl -kfsS https://localhost/ | grep -q 'id="root"'
           curl -kfsS https://localhost/eventos | grep -q 'id="root"'
           test "$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/me)" = "401"

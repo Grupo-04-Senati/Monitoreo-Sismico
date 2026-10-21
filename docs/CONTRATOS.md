@@ -152,6 +152,13 @@ registrar_auditoria(
   `POST /audit-retention/purge`. Ver D20.
 - Leer un parámetro desde el backend: `await configuracion.valor(db, "clave")`.
 
+## 7g. Monitoreo
+
+- `GET /api/v1/monitoring` (permiso `configuracion`): `{estado: ok|degradado|critico,
+  generado_en, comprobaciones: [{clave, nombre, estado: ok|aviso|critico|sin_datos,
+  detalle, datos}]}`. Umbrales en `services/monitoreo.py` (D23).
+- `GET /health/ready` (público): 200 `{"status":"ok"}` o 503 si la base no responde.
+
 ## 8. Datos y estados
 
 - Nada de datos de ejemplo ni valores inventados. Si falta un dato: `null` y la UI muestra

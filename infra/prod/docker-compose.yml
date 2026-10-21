@@ -44,6 +44,16 @@ services:
   api:
     <<: *api
     command: ["api"]
+    # Además de lo común, la API lee (solo lectura) la carpeta de copias para el monitoreo.
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      MONITOREO_BACKUP_DIR: /backups
+    volumes:
+      - ml-artifacts:/data/ml-artifacts
+      - reports:/data/reports
+      - ${SISMO_BACKUP_DIR:-./backups}:/backups:ro
     depends_on:
       db:
         condition: service_healthy

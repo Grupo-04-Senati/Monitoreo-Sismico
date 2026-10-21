@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     #: Frecuencia de la ingesta programada (minutos).
     INGESTION_INTERVAL_MINUTES: int = 15
 
+    #: Carpeta de copias de seguridad que vigila el monitoreo (vacío = no se vigila).
+    MONITOREO_BACKUP_DIR: str = ""
+
     #: Carpeta de artefactos de ML (modelos entrenados). Vacío = `services/ml/artifacts`.
     ML_ARTIFACTS_DIR: str = ""
 

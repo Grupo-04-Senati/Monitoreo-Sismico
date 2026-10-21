@@ -287,3 +287,21 @@ solo se registran los puntos grises.
 - **Descartado:** Kubernetes o servicios administrados (desproporcionados para el MVP) y
   nginx con certbot (Caddy renueva certificados sin tareas extra).
 
+## D23. Monitoreo operativo propio, con umbrales a la vista
+
+- **Decisión:** `GET /api/v1/monitoring` (solo Administrador; pantalla Configuración →
+  Estado del sistema) comprueba base de datos, retraso de la ingesta por fuente frente a
+  su frecuencia, ejecuciones fallidas o colgadas, avisos con entrega fallida o
+  aprobación atrasada, latencia p50/p95 y errores 5xx de la API (medidos en el proceso)
+  y antigüedad de la última copia de seguridad (carpeta montada en solo lectura). Cada
+  comprobación da `ok`, `aviso`, `critico` o `sin_datos` con un detalle en lenguaje llano;
+  los umbrales son constantes en `services/monitoreo.py`. `GET /health/ready` (público,
+  sin datos) devuelve 503 si la base no responde, para monitores externos.
+- **Motivo:** PDF §12 (monitorear fuentes, retraso de ingesta, fallos de tareas, latencia
+  y entregas de alertas) y Fase 9 (monitorización y manuales).
+- **Costo:** sin historial ni notificaciones propias: se consulta en vivo y conviene un
+  monitor externo sobre `/health/ready`. La latencia se pierde al reiniciar la API y, con
+  varios procesos, cada uno mide la suya.
+- **Descartado:** Prometheus y Grafana (otra pieza que operar para un MVP de un servidor)
+  y umbrales editables desde la web (se cambian revisando el código).
+

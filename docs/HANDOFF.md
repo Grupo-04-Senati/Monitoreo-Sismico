@@ -11,6 +11,9 @@ Usuarios y auth). Rama: `feat/nucleo-mis-modulos`. Etiqueta: `v0.1-nucleo`.
 - Frontend Vite/React conectado a la API real para los módulos de A.
 - Contraseña de admin solo por consola/`SISMO_ADMIN_PASSWORD`; sin secretos en el repo.
 - Pruebas de ingesta (idempotencia del motor) en verde.
+- Todos los módulos del plan con API y pantalla; Fase 9 cerrada: CI (D21), despliegue con
+  HTTPS y copias (D22, `docs/DESPLIEGUE.md`), monitoreo (D23), `docs/MANUAL_TECNICO.md` y
+  `docs/CHECKLIST_ACEPTACION.md`.
 
 ## 2. Cómo levantar todo
 

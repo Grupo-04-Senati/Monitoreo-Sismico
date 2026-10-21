@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+import time
 import uuid
 
 from sqlalchemy import func, select
@@ -29,8 +30,10 @@ from app.routers import (
     usuarios,
     auditoria,
     configuracion,
+    monitoreo,
 )
 from app.services.audit import esperar_auditoria
+from app.services.monitoreo import latencias
 
 
 @asynccontextmanager
@@ -70,10 +73,13 @@ async def correlation_id_middleware(request: Request, call_next):
     correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
     request.state.correlation_id = correlation_id
     token = correlation_id_actual.set(correlation_id)
+    inicio = time.perf_counter()
     try:
         response = await call_next(request)
     finally:
         correlation_id_actual.reset(token)
+    if request.url.path.startswith("/api/"):
+        latencias.registrar((time.perf_counter() - inicio) * 1000, response.status_code)
     response.headers["X-Correlation-ID"] = correlation_id
     for nombre, valor in CABECERAS.items():
         response.headers.setdefault(nombre, valor)
@@ -100,11 +106,24 @@ app.include_router(usuarios.router, prefix=f"{API_PREFIX}/users", tags=["usuario
 app.include_router(usuarios.roles_router, prefix=API_PREFIX, tags=["usuarios"])
 app.include_router(auditoria.router, prefix=f"{API_PREFIX}/audit-logs", tags=["auditoria"])
 app.include_router(configuracion.router, prefix=f"{API_PREFIX}/settings", tags=["configuracion"])
+app.include_router(monitoreo.router, prefix=f"{API_PREFIX}/monitoring", tags=["monitoreo"])
 
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/health/ready")
+async def readiness(db: AsyncSession = Depends(get_db)):
+    """Para monitores externos: 200 si la base responde, 503 si no. No expone datos."""
+    from fastapi.responses import JSONResponse
+
+    try:
+        await db.execute(select(1))
+    except Exception:  # noqa: BLE001 - cualquier fallo de la base es "no listo"
+        return JSONResponse(status_code=503, content={"status": "sin_base_de_datos"})
+    return {"status": "ok"}
 
 
 @app.get(f"{API_PREFIX}/meta")
