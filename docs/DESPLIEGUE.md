@@ -145,4 +145,5 @@ sincronización del USGS.
 - Los modelos de ML y los reportes viven en volúmenes (`ml-artifacts`, `reports`) que la
   copia de PostgreSQL no incluye: los modelos se pueden reentrenar con el dataset y la
   semilla guardados; los reportes son temporales.
-- Sin monitoreo externo todavía (Fase 9c): revisar `logs` y `/health`.
+- El monitoreo (Configuración → Estado del sistema, D23) se consulta en vivo: apunte un
+  monitor externo a `https://<dominio>/health/ready` para recibir alertas si se cae.

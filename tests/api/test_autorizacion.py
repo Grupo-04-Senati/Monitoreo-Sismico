@@ -36,6 +36,7 @@ from app.main import app  # noqa: E402
 #: Rutas accesibles sin sesión (método, ruta).
 PUBLICAS: set[tuple[str, str]] = {
     ("GET", "/health"),
+    ("GET", "/health/ready"),
     ("GET", "/api/v1/meta"),
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/register"),
@@ -78,6 +79,7 @@ RUTAS_B: list[tuple[str, str, str]] = [
     ("GET", "/api/v1/audit-logs/facets", "auditoria"),
     ("GET", "/api/v1/audit-logs/export", "auditoria"),
     ("GET", "/api/v1/settings", "configuracion"),
+    ("GET", "/api/v1/monitoring", "configuracion"),
     ("GET", "/api/v1/settings/history", "configuracion"),
     ("GET", "/api/v1/settings/audit-retention", "configuracion"),
     ("POST", "/api/v1/settings/audit-retention/purge", "configuracion"),

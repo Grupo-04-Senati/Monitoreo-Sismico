@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "@/lib/api";
 import { IconCheck, IconInfo } from "@/components/ui/Icons";
-import type { Cambio, Configuracion, Parametro, Retencion } from "./types";
+import type { Cambio, Configuracion, EstadoSistema, Parametro, Retencion } from "./types";
 import {
   cambiarParametro,
   obtenerConfiguracion,
+  obtenerEstado,
   obtenerHistorial,
   obtenerRetencion,
   purgarAuditoria,
@@ -14,6 +15,7 @@ import TarjetaParametro from "./components/TarjetaParametro";
 import PanelRetencion from "./components/PanelRetencion";
 import HistorialCambios from "./components/HistorialCambios";
 import PanelEntorno from "./components/PanelEntorno";
+import PanelEstado from "./components/PanelEstado";
 
 function mensaje(error: unknown, porDefecto: string): string {
   return error instanceof ApiError && error.detail ? error.detail : porDefecto;
@@ -28,6 +30,20 @@ export default function ConfiguracionPage() {
   const [guardando, setGuardando] = useState<string | null>(null);
   const [purgando, setPurgando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoSistema | null>(null);
+  const [comprobando, setComprobando] = useState(true);
+
+  const comprobar = useCallback(() => {
+    setComprobando(true);
+    obtenerEstado()
+      .then(setEstado)
+      .catch(() => setEstado(null))
+      .finally(() => setComprobando(false));
+  }, []);
+
+  useEffect(() => {
+    comprobar();
+  }, [comprobar, nonce]);
 
   useEffect(() => {
     let vivo = true;
@@ -110,6 +126,10 @@ export default function ConfiguracionPage() {
           </button>
         </div>
       )}
+
+      <div className="mb-4">
+        <PanelEstado estado={estado} cargando={comprobando} onActualizar={comprobar} />
+      </div>
 
       <section aria-labelledby="titulo-parametros" className="mb-4">
         <h2 id="titulo-parametros" className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-content-secondary">

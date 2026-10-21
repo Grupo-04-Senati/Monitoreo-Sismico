@@ -139,11 +139,14 @@ jobs:
       - name: Validar docker-compose
         run: $COMPOSE config --quiet
       - name: Construir y levantar (la API arranca en modo producción)
-        run: $COMPOSE up -d --build --wait --wait-timeout 300
+        run: |
+          set -o pipefail
+          $COMPOSE up -d --build --wait --wait-timeout 300 2>&1 | tee "$RUNNER_TEMP/up.log"
       - name: Prueba de humo por HTTPS
         run: |
           set -e
           curl -kfsS https://localhost/health
+          curl -kfsS https://localhost/health/ready | grep -q '"ok"'
           curl -kfsS https://localhost/ | grep -q 'id="root"'
           curl -kfsS https://localhost/eventos | grep -q 'id="root"'
           test "$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/auth/me)" = "401"
@@ -157,7 +160,17 @@ jobs:
           $COMPOSE exec -T backup sh /scripts/simulacro_restauracion.sh
       - name: Registros si algo falló
         if: failure()
-        run: $COMPOSE logs --no-color --tail 200
+        run: |
+          $COMPOSE ps -a
+          $COMPOSE logs --no-color --tail 200
+          # Resumen como anotación: se puede leer sin iniciar sesión en GitHub.
+          {
+            echo "== servicios"; $COMPOSE ps -a --format '{{.Service}}: {{.State}} {{.Status}}' 2>&1
+            echo "== construir y levantar (final)"; tail -n 40 "$RUNNER_TEMP/up.log" 2>/dev/null
+            echo "== registros (final)"; $COMPOSE logs --no-color --tail 15 2>&1 | tail -n 60
+          } > "$RUNNER_TEMP/resumen.txt"
+          texto=$(sed -e 's/%/%25/g' -e 's/\r//g' "$RUNNER_TEMP/resumen.txt" | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=Registros del despliegue::${texto}"
       - name: Apagar y borrar volúmenes
         if: always()
         run: $COMPOSE down -v

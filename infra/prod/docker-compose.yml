@@ -44,6 +44,16 @@ services:
   api:
     <<: *api
     command: ["api"]
+    # Además de lo común, la API lee (solo lectura) la carpeta de copias para el monitoreo.
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      MONITOREO_BACKUP_DIR: /backups
+    volumes:
+      - ml-artifacts:/data/ml-artifacts
+      - reports:/data/reports
+      - ${SISMO_BACKUP_DIR:-./backups}:/backups:ro
     depends_on:
       db:
         condition: service_healthy
@@ -53,8 +63,13 @@ services:
   worker:
     <<: *api
     command: ["worker"]
+    # Sano si el worker responde a un ping de Celery a través de Redis.
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "celery -A app.tasks.celery_app inspect ping --destination celery@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
     depends_on:
       api:
         condition: service_healthy
@@ -62,8 +77,13 @@ services:
   beat:
     <<: *api
     command: ["beat"]
+    # Sano si el programador ya creó su archivo de programación.
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "ls /tmp/celerybeat-schedule* > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     depends_on:
       api:
         condition: service_healthy

@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPut } from "@/lib/api";
-import type { Cambio, Configuracion, Parametro, Retencion } from "../types";
+import type { Cambio, Configuracion, EstadoSistema, Parametro, Retencion } from "../types";
 
 /* ════════════════════════════════════════════════════════════════
    Acceso a datos del módulo "Configuración" (solo Administrador):
@@ -9,6 +9,7 @@ import type { Cambio, Configuracion, Parametro, Retencion } from "../types";
      GET  /api/v1/settings/history               → control de cambios
      GET  /api/v1/settings/audit-retention       → vista previa de la retención
      POST /api/v1/settings/audit-retention/purge → purga manual (auditada)
+     GET  /api/v1/monitoring                     → estado operativo del sistema
    ════════════════════════════════════════════════════════════════ */
 
 export const obtenerConfiguracion = () => apiGet<Configuracion>("/settings");
@@ -21,3 +22,5 @@ export const obtenerHistorial = () => apiGet<Cambio[]>("/settings/history?limite
 export const obtenerRetencion = () => apiGet<Retencion>("/settings/audit-retention");
 
 export const purgarAuditoria = () => apiPost<Retencion>("/settings/audit-retention/purge");
+
+export const obtenerEstado = () => apiGet<EstadoSistema>("/monitoring");

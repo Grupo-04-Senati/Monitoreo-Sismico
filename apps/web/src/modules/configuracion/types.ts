@@ -54,3 +54,20 @@ export interface Retencion {
   mas_antiguo: string | null;
   borrados?: number | null;
 }
+
+export type EstadoComprobacion = "ok" | "aviso" | "critico" | "sin_datos";
+
+export interface Comprobacion {
+  clave: string;
+  nombre: string;
+  estado: EstadoComprobacion;
+  detalle: string;
+  datos: Record<string, unknown>;
+}
+
+/** Estado operativo (`GET /api/v1/monitoring`). */
+export interface EstadoSistema {
+  estado: "ok" | "degradado" | "critico";
+  generado_en: string;
+  comprobaciones: Comprobacion[];
+}
