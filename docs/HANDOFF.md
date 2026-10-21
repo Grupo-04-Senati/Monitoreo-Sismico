@@ -109,15 +109,17 @@ npm run build
 ### 4.2 Pendientes del núcleo / dependencias externas
 - **Auditoría**: retención configurable con purga manual protegida (D20). Pendiente: purga
   programada si la empresa la exige.
-- **GeoJSON de regiones**: el mapa dibuja "Capa base pendiente" hasta tener geometría real.
+- **Regiones**: departamento derivado de las coordenadas y capa oficial en el mapa (D24).
+  Tras actualizar una instalación con datos previos: `python -m app.scripts.asignar_regiones`.
+  Pendiente: mapa propio en el Dashboard (hoy remite al Mapa sísmico).
 - **Ingesta**: fuente USGS funcionando (D15). Pendiente: aplicar revisiones de eventos ya
-  guardados, derivar el departamento (`region`) y el IGP como segunda fuente.
+  guardados y el IGP como segunda fuente.
 
 ### 4.3 Pruebas faltantes (backlog)
 - [x] **403 por rol**: matriz de los 5 roles en `tests/api/test_autorizacion.py`.
-- [ ] **Datos en CI**: una semilla pequeña de sismos para que las pruebas de alertas,
-      datasets, ML y estimaciones también corran en GitHub.
-- [ ] **react-router 7**: corrige 2 avisos moderados de `npm audit` (cambio incompatible).
+- [x] **Datos en CI**: muestra real del USGS (`tests/fixtures`); corren alertas y eventos.
+- [x] **react-router 7**: hecho (`npm audit`: 0 vulnerabilidades).
+- [x] **E2E y accesibilidad**: `apps/web/e2e` (18 flujos, axe WCAG 2.1 AA).
 - [ ] **Idempotencia de sync (extremo a extremo)**: repetir la sincronización contra la BD
       real no duplica filas por `(source_id, external_id)` (hoy probado solo a nivel de motor).
 - [ ] **410 en reportes**: descargar un reporte inexistente/eliminado devuelve `410 Gone`

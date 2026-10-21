@@ -305,3 +305,23 @@ solo se registran los puntos grises.
 - **Descartado:** Prometheus y Grafana (otra pieza que operar para un MVP de un servidor)
   y umbrales editables desde la web (se cambian revisando el código).
 
+## D24. Región (departamento) derivada de las coordenadas
+
+- **Decisión:** el USGS no entrega el departamento; se deriva al normalizar cada sismo con
+  los límites departamentales (`services/ingestion/datos/peru_departamental_simple.geojson`,
+  basado en el INEI, licencia MPL-2.0; el mismo archivo del fondo de la interfaz). Regla:
+  dentro de un departamento → ese departamento; fuera de los polígonos (casi siempre en el
+  mar) y con el texto de lugar de la fuente mencionando "Peru" → el departamento más
+  cercano a menos de 200 km; en otro caso (otro país, sin texto o más lejos) → sin región.
+  `python -m app.scripts.asignar_regiones` completa lo ya guardado (idempotente). La API
+  sirve la capa (`GET /api/v1/regions/geojson`) y el Mapa sísmico la carga sola.
+- **Motivo:** PDF §6.3 y §14 (filtros por zona coherentes en mapa, gráficas y API). Casi
+  la mitad del catálogo cae fuera de los polígonos: 2 400 sismos frente a la costa
+  peruana y 1 230 en países vecinos. Usar solo la distancia asignaba a "Puno" un sismo en
+  La Paz; el texto de lugar de la fuente lo evita.
+- **Costo:** el departamento de un sismo en el mar es "el más cercano", no una división
+  oficial del mar. Con 200 km queda sin región un 0,5 % de los sismos peruanos (muy mar
+  adentro). La geometría es simplificada: en un borde puede tocar el departamento vecino.
+- **Descartado:** dejar `region` vacía (filtros inútiles), PostGIS (otra dependencia para
+  25 polígonos) y asignar por distancia sin mirar el país.
+

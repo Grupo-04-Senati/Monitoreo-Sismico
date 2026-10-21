@@ -11,8 +11,9 @@ Mapeo (feature → `NormalizedEvent`):
 - `properties.url` → `source_url`
 - `properties.status`: `reviewed` → "observado"; `automatic` → "pendiente_validacion"
 
-`region` (departamento del Perú) queda vacía: el USGS no la entrega y no se
-inventa. Lo inválido se rechaza con su motivo, sin cortar la sincronización.
+`region` (departamento del Perú): el USGS no la entrega; se deriva de las
+coordenadas con los límites departamentales (`ingestion.geografia`, decisión D24).
+Si el epicentro no cae en un departamento ni la fuente lo sitúa en el Perú, queda vacía. Lo inválido se rechaza con su motivo, sin cortar la sincronización.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from ingestion.connectors.base import RawRecord
+from ingestion.geografia import departamento
 from ingestion.models import NormalizedEvent
 from ingestion.normalizers.base import NormalizationResult
 from ingestion.validation import origin_hash, validar
@@ -100,7 +102,7 @@ class UsgsNormalizer:
             depth_km=depth_km,
             magnitude=magnitude,
             magnitude_type=tipo_magnitud(props.get("magType")),
-            region=None,
+            region=departamento(latitude, longitude, str(lugar) if lugar else None),
             locality=str(lugar)[:160] if lugar else None,
             source_url=str(url)[:500] if url else None,
             review_status=estado,

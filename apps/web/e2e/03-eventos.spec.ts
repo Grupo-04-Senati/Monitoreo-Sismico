@@ -60,3 +60,12 @@ test("el detalle de un sismo muestra magnitud, profundidad y enlace a la fuente"
   const href = (await enlace.getAttribute("href")) ?? "";
   expect(muestra().some((f) => href.includes(f.id))).toBeTruthy();
 });
+
+test("el mapa carga solo la capa oficial de los 25 departamentos", async ({ page }) => {
+  await iniciarSesion(page, "analista");
+  await page.goto("/mapa-sismico?periodo=custom&desde=2025-01-01&hasta=2025-12-31");
+  await expect(page.getByText("Límites departamentales (INEI)")).toBeVisible();
+  await expect(page.getByText("25 de 25 regiones")).toBeVisible();
+  // Con la región derivada, el panel ya reparte los sismos por departamento.
+  await expect(page.getByRole("button", { name: /Filtrar por Arequipa: \d+ eventos/ })).toBeVisible();
+});
