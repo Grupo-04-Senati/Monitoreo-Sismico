@@ -43,7 +43,11 @@ async def _contexto():
             async with engine.connect() as conn:
                 if not await conn.scalar(text("SELECT to_regclass('datasets') IS NOT NULL")):
                     return None
-                eventos = await conn.scalar(text("SELECT count(*) FROM seismic_events"))
+                # Hace falta catálogo en el periodo de la prueba (2015-2024), no solo "algún" evento:
+                # la muestra del CI (2025) no lo tiene y entonces la prueba se omite.
+                eventos = await conn.scalar(text(
+                    "SELECT count(*) FROM seismic_events WHERE occurred_at >= '2015-01-01' AND occurred_at < '2025-01-01'"
+                ))
                 usuario = await conn.scalar(text("SELECT id FROM users ORDER BY created_at LIMIT 1"))
                 return usuario if eventos and usuario else None
     except Exception:  # noqa: BLE001
@@ -52,7 +56,7 @@ async def _contexto():
 
 USUARIO_ID = _ejecutar(_contexto)
 if USUARIO_ID is None:
-    pytest.skip("PostgreSQL no disponible, sin la migración 0013 o sin eventos/usuarios", allow_module_level=True)
+    pytest.skip("PostgreSQL no disponible, sin la migración 0013, sin usuarios o sin catálogo 2015-2024", allow_module_level=True)
 
 
 async def _limpiar():
