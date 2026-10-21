@@ -28,7 +28,9 @@ def _pool_por_prueba():
     asyncpg no pueden pasar de un bucle a otro: se suelta el pool (sin cerrar
     conexiones ligadas a un bucle ya terminado) antes y después de cada prueba."""
     from app.db.database import engine
+    from app.services import cache_catalogo
 
     asyncio.run(engine.dispose(close=False))
+    cache_catalogo.vaciar()  # ninguna prueba ve respuestas guardadas por otra
     yield
     asyncio.run(engine.dispose(close=False))
