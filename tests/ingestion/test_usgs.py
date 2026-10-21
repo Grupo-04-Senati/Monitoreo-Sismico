@@ -94,7 +94,7 @@ def test_normaliza_un_evento_revisado():
     assert e.review_status == "observado"
     assert e.locality == "35 km SW of Lima, Peru"
     assert e.source_url.endswith("/us7000prueba")
-    assert e.region is None  # el USGS no entrega el departamento: no se inventa
+    assert e.region == "Lima"  # derivado de las coordenadas (35 km al SO de Lima, en el mar)
     assert len(e.origin_hash) == 64
 
 

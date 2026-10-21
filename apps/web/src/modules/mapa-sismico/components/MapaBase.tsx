@@ -3,6 +3,7 @@ import type { CapaMapa, EventoSismico, GeoRegiones, RegionResumen } from "../typ
 import { COLOR_PUNTO, SIN_EVENTOS, agruparPuntos, crearProyector, escalaCian, radioMagnitud } from "../lib/geo";
 import { IconAlertTriangle, IconLayers, IconMapPin, IconUpload } from "@/components/ui/Icons";
 import LeyendaMapa from "./LeyendaMapa";
+import { CAPA_OFICIAL } from "../hooks/useGeoJSON";
 
 interface MapaBaseProps {
   geo: GeoRegiones | null;
@@ -38,8 +39,8 @@ function pathDeForma(polys: [number, number][][][], proy: (lon: number, lat: num
 }
 
 /**
- * Mapa base del módulo. **No dibuja geografía propia**: sin un GeoJSON cargado
- * por el usuario no hay contornos ni puntos. Con el archivo, sombrea las
+ * Mapa base del módulo. Usa la capa oficial de departamentos que entrega la API
+ * (D24) o un GeoJSON que cargue el usuario; sin capa no dibuja contornos ni puntos. Con el archivo, sombrea las
  * regiones por cantidad de eventos (gama neutra de cian) y dibuja los puntos
  * con tamaño por magnitud, agrupando los cercanos.
  */
@@ -149,13 +150,15 @@ export default function MapaBase({
         >
           Cambiar GeoJSON
         </button>
-        <button
-          type="button"
-          onClick={onLimpiarArchivo}
-          className="rounded-md border border-border px-2 py-0.5 text-[11px] text-content-secondary transition-colors hover:bg-surface-tertiary"
-        >
-          Quitar
-        </button>
+        {nombreArchivo !== CAPA_OFICIAL && (
+          <button
+            type="button"
+            onClick={onLimpiarArchivo}
+            className="rounded-md border border-border px-2 py-0.5 text-[11px] text-content-secondary transition-colors hover:bg-surface-tertiary"
+          >
+            Volver a la capa oficial
+          </button>
+        )}
       </div>
 
       {(totalNoCoinciden > 0 || geo.sinNombre > 0) && (
@@ -177,7 +180,8 @@ export default function MapaBase({
       <div className="relative min-h-0 flex-1">
         <svg
           viewBox={`0 0 ${proy.width} ${proy.height}`}
-          role="img"
+          // "group" (no "img"): contiene regiones y eventos que se pueden pulsar con teclado.
+          role="group"
           aria-label="Mapa de eventos sísmicos sobre regiones"
           className="h-full w-full cursor-zoom-in rounded-lg border border-border bg-white"
           onClick={onAbrirModal}

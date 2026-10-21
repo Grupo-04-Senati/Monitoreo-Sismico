@@ -63,6 +63,12 @@ docker compose -f infra/prod/docker-compose.yml --env-file infra/prod/.env.prod 
   exec api python -m app.scripts.sincronizar --fuente usgs --desde 2000-01-01
 ```
 
+Si se migran datos de una instalación anterior, asignar su departamento (una vez):
+
+```bash
+docker compose -f infra/prod/docker-compose.yml --env-file infra/prod/.env.prod   exec api python -m app.scripts.asignar_regiones
+```
+
 Comprobar: `https://<dominio>/health` responde `{"status":"ok"}` y la web pide iniciar sesión.
 
 ## 4. Operación diaria

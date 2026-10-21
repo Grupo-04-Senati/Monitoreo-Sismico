@@ -879,7 +879,7 @@ export default function DashboardPage() {
         >
           <div className="chart-plot flex h-[300px] items-center justify-center rounded-lg px-4 text-center">
             <p className="text-xs text-content-muted">
-              Capa base pendiente · el mapa se mostrará cuando exista el GeoJSON oficial de regiones.
+              Los eventos por departamento se ven sobre los límites oficiales en el módulo Mapa sísmico.
             </p>
           </div>
         </AnalyticCard>
@@ -1150,9 +1150,10 @@ export default function DashboardPage() {
                   {/* Capa base pendiente: sin GeoJSON oficial no se dibuja geografía */}
                   <div className={`chart-plot flex min-h-[300px] items-center justify-center rounded-lg px-6 text-center ${m.full ? "h-full" : ""}`}>
                     <div>
-                      <p className="text-sm font-semibold text-content">Capa base pendiente</p>
+                      <p className="text-sm font-semibold text-content">Mapa por departamento</p>
                       <p className="mt-1 text-xs text-content-muted">
-                        El mapa se mostrará cuando exista el GeoJSON oficial de regiones. No se dibuja geografía aproximada.
+                        Los eventos sobre los límites oficiales están en el{" "}
+                        <Link to="/mapa-sismico" className="font-medium text-accent-700 underline dark:text-accent-300">Mapa sísmico</Link>.
                       </p>
                     </div>
                   </div>

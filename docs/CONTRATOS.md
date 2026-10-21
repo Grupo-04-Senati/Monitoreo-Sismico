@@ -152,6 +152,11 @@ registrar_auditoria(
   `POST /audit-retention/purge`. Ver D20.
 - Leer un parámetro desde el backend: `await configuracion.valor(db, "clave")`.
 
+## 7f-bis. Regiones
+
+- `GET /api/v1/regions/geojson` (permiso `mapa`): límites de los 25 departamentos, con
+  `properties.nombre` igual al campo `region` de los eventos (D24).
+
 ## 7g. Monitoreo
 
 - `GET /api/v1/monitoring` (permiso `configuracion`): `{estado: ok|degradado|critico,
