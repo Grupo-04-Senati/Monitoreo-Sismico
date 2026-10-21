@@ -424,3 +424,83 @@ class AuditLog(Base):
         Index("ix_audit_logs_actor", "actor_id"),
         Index("ix_audit_logs_action", "action"),
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Preparación de datos (módulo 6.5)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class DatasetStatus(str):
+    BORRADOR = "borrador"
+    APROBADO = "aprobado"
+
+
+class Dataset(Base):
+    """Conjunto de datos versionado para análisis y ML (PDF §6.5 y §7).
+
+    Congela la lista exacta de eventos (`dataset_events`), las reglas de limpieza,
+    la partición temporal y el informe de calidad: un modelo entrenado sobre él es
+    reproducible aunque el catálogo cambie después. Un dataset **aprobado** es
+    inmutable (trigger en la migración `0013_datasets`).
+    """
+
+    __tablename__ = "datasets"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=DatasetStatus.BORRADOR)
+
+    #: Fuente y periodo consultados (fechas UTC, ambos extremos incluidos).
+    source_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("data_sources.id", ondelete="RESTRICT")
+    )
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    #: Consulta, reglas de limpieza e imputación aplicadas (reproducibilidad).
+    query_spec: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    cleaning_rules: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    variables: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    target_name: Mapped[str | None] = mapped_column(String(64))
+    #: Partición temporal: entrenamiento antes del corte, prueba desde el corte.
+    split_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    row_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    quality_report: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    created_by: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_datasets_name_version"),
+        CheckConstraint("status IN ('borrador', 'aprobado')", name="ck_datasets_status"),
+        CheckConstraint("period_start <= period_end", name="ck_datasets_period"),
+        Index("ix_datasets_created_at", "created_at"),
+    )
+
+
+class DatasetEvent(Base):
+    """Evento incluido en un dataset (instantánea; solo inserción)."""
+
+    __tablename__ = "dataset_events"
+
+    dataset_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("datasets.id", ondelete="CASCADE"), primary_key=True
+    )
+    event_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("seismic_events.id", ondelete="RESTRICT"), primary_key=True
+    )
+    #: "entrenamiento" | "prueba" | None (sin partición).
+    split: Mapped[str | None] = mapped_column(String(16))
+

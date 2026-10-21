@@ -46,6 +46,10 @@ PUBLICAS: set[tuple[str, str]] = {
 RUTAS_B: list[tuple[str, str, str]] = [
     ("GET", "/api/v1/datasets", "preparacion"),
     ("GET", "/api/v1/datasets/x/quality", "preparacion"),
+    ("GET", "/api/v1/datasets/x", "preparacion"),
+    ("GET", "/api/v1/datasets/x/rows", "preparacion"),
+    ("POST", "/api/v1/datasets", "preparacion"),
+    ("POST", "/api/v1/datasets/x/approve", "rol:admin"),
     ("GET", "/api/v1/ml/experiments", "modelos"),
     ("GET", "/api/v1/ml/experiments/x", "modelos"),
     ("POST", "/api/v1/ml/models/x/approve", "rol:admin"),

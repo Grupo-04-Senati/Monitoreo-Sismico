@@ -104,8 +104,9 @@ incluye los comandos de verificación y la lista de **pruebas pendientes**:
 
 ## 8. Qué te toca a ti (Dueño B)
 
-1. Rellenar los módulos en blanco: Preparación de datos, Modelos ML, Estimaciones, Reglas de
-   alertas, Centro de alertas, Auditoría y Configuración.
+1. Rellenar los módulos en blanco: Modelos ML, Estimaciones, Reglas de alertas, Centro de
+   alertas y Configuración. Preparación de datos y Auditoría ya tienen API (faltan sus
+   pantallas); ver `docs/HANDOFF.md` §4.1.
 2. ~~Crear la tabla `audit_logs`~~ (hecho, migración `0011`). Falta la pantalla de
    Auditoría, la retención configurable y la exportación auditada.
 3. Nunca presentar una estimación de ML como alerta oficial.

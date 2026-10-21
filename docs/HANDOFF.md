@@ -83,9 +83,11 @@ npm run build
 
 ## 4. Qué queda pendiente
 
-### 4.1 Módulos del Dueño B (hoy `ModuleStub` / routers vacíos)
-- Preparación de datos, Modelos ML, Estimaciones, Reglas de alertas, Centro de alertas,
-  Auditoría, Configuración.
+### 4.1 Módulos del Dueño B
+- **Preparación de datos**: API lista (`/api/v1/datasets`, D16); falta la pantalla.
+- **Auditoría**: tabla y `GET /audit-logs` listos (D14); falta la pantalla.
+- Pendientes (hoy `ModuleStub` / rutas que responden vacío o 501): Modelos ML,
+  Estimaciones, Reglas de alertas, Centro de alertas, Configuración.
 - No tocar sin avisar; el núcleo ya deja los puntos de integración (`registrar_auditoria`,
   `permissions.py`, `models.py`).
 

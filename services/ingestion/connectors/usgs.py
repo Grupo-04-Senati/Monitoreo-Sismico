@@ -9,13 +9,18 @@ voladuras de cantera y explosiones).
   `ventana_inicial_dias` días.
 - Siguientes: trae desde `since` menos `solape_horas`, para recoger eventos que
   el USGS publica con retraso. Los repetidos los descarta la idempotencia.
+- Rangos largos (carga histórica) se piden por tramos de `dias_por_tramo` días,
+  y cada tramo se reintenta ante cortes de red: una sola descarga grande es
+  frágil con una conexión inestable.
 
 Usa la biblioteca estándar (`urllib`) para no añadir dependencias.
 """
 
 from __future__ import annotations
 
+import http.client
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,23 +52,50 @@ class UsgsConnector:
         timeout_sec: float = 30.0,
         ventana_inicial_dias: int = 365,
         solape_horas: int = 6,
+        dias_por_tramo: int = 365,
+        intentos_por_tramo: int = 3,
         ahora: Callable[[], datetime] = _ahora_utc,
+        pausa: Callable[[float], None] = time.sleep,
     ) -> None:
         self.url = url or URL_USGS
         self.timeout_sec = timeout_sec
         self.ventana_inicial_dias = ventana_inicial_dias
         self.solape_horas = solape_horas
+        self.dias_por_tramo = dias_por_tramo
+        self.intentos_por_tramo = intentos_por_tramo
         self.ahora = ahora
+        self.pausa = pausa
 
-    def parametros(self, since: datetime | None) -> dict[str, str]:
+    def inicio(self, since: datetime | None) -> datetime:
         if since is None:
-            inicio = self.ahora() - timedelta(days=self.ventana_inicial_dias)
-        else:
-            inicio = since - timedelta(hours=self.solape_horas)
-        return {
+            return self.ahora() - timedelta(days=self.ventana_inicial_dias)
+        return since - timedelta(hours=self.solape_horas)
+
+    def tramos(self, since: datetime | None) -> list[tuple[datetime, datetime | None]]:
+        """Intervalos [inicio, fin) a consultar; el último queda abierto (hasta hoy)."""
+        desde = self.inicio(since)
+        ahora = self.ahora()
+        paso = timedelta(days=self.dias_por_tramo)
+        tramos: list[tuple[datetime, datetime | None]] = []
+        while desde + paso < ahora:
+            tramos.append((desde, desde + paso))
+            desde += paso
+        tramos.append((desde, None))
+        return tramos
+
+    @staticmethod
+    def _fmt(momento: datetime) -> str:
+        return momento.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+    def parametros(self, since: datetime | None, fin: datetime | None = None) -> dict[str, str]:
+        """Parámetros de la consulta que empieza en `inicio(since)` (y acaba en `fin`)."""
+        return self._params(self.inicio(since), fin)
+
+    def _params(self, inicio: datetime, fin: datetime | None) -> dict[str, str]:
+        params = {
             "format": "geojson",
             "eventtype": "earthquake",
-            "starttime": inicio.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+            "starttime": self._fmt(inicio),
             "minlatitude": str(LAT_MIN),
             "maxlatitude": str(LAT_MAX),
             "minlongitude": str(LON_MIN),
@@ -71,6 +103,9 @@ class UsgsConnector:
             "orderby": "time-asc",
             "limit": str(LIMITE_USGS),
         }
+        if fin is not None:
+            params["endtime"] = self._fmt(fin)
+        return params
 
     def _get_json(self, url: str) -> dict[str, Any]:
         peticion = urllib.request.Request(
@@ -85,23 +120,39 @@ class UsgsConnector:
             raise ConnectorError(f"No se pudo conectar con el USGS: {exc.reason}") from exc
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise ConnectorError("Respuesta del USGS no es JSON válido") from exc
+        except (http.client.HTTPException, OSError) as exc:
+            # Cortes a mitad de descarga (IncompleteRead), reinicios y timeouts.
+            raise ConnectorError(f"Conexión con el USGS interrumpida ({type(exc).__name__})") from exc
 
-    def fetch(self, since: datetime | None) -> list[RawRecord]:
-        url = f"{self.url}?{urllib.parse.urlencode(self.parametros(since))}"
-        datos = self._get_json(url)
+    def _features_de_tramo(self, inicio: datetime, fin: datetime | None) -> list[dict[str, Any]]:
+        url = f"{self.url}?{urllib.parse.urlencode(self._params(inicio, fin))}"
+        for intento in range(1, self.intentos_por_tramo + 1):
+            try:
+                datos = self._get_json(url)
+                break
+            except ConnectorError:
+                if intento == self.intentos_por_tramo:
+                    raise
+                self.pausa(2 ** (intento - 1))
         features = datos.get("features")
         if not isinstance(features, list):
             raise ConnectorError("Respuesta del USGS sin la lista 'features'")
         if len(features) >= LIMITE_USGS:
             # Nunca se truncan datos en silencio.
             raise ConnectorError(
-                f"El USGS devolvió {LIMITE_USGS} eventos (el máximo): reduzca la ventana."
+                f"El USGS devolvió {LIMITE_USGS} eventos (el máximo): reduzca el tramo."
             )
-        return [
-            RawRecord(external_id=str(f.get("id")), payload=f)
-            for f in features
-            if isinstance(f, dict) and f.get("id")
-        ]
+        return features
+
+    def fetch(self, since: datetime | None) -> list[RawRecord]:
+        registros: list[RawRecord] = []
+        vistos: set[str] = set()
+        for inicio, fin in self.tramos(since):
+            for f in self._features_de_tramo(inicio, fin):
+                if isinstance(f, dict) and f.get("id") and str(f["id"]) not in vistos:
+                    vistos.add(str(f["id"]))
+                    registros.append(RawRecord(external_id=str(f["id"]), payload=f))
+        return registros
 
 
 __all__ = ["UsgsConnector", "URL_USGS", "LIMITE_USGS"]

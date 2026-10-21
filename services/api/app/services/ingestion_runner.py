@@ -197,12 +197,19 @@ async def sincronizar(
     run: IngestionRun,
     *,
     correlation_id: str | None = None,
+    desde: datetime | None = None,
+    timeout_sec: int | None = None,
 ) -> IngestionRun:
-    """Ejecuta la sincronización completa (conector → normalizador → BD)."""
-    since = await _marca_incremental(db, source.id)
+    """Ejecuta la sincronización completa (conector → normalizador → BD).
+
+    `desde` fuerza el inicio (carga histórica); por defecto se continúa desde la
+    última ejecución. `timeout_sec` permite más tiempo para cargas grandes.
+    """
+    since = desde or await _marca_incremental(db, source.id)
+    timeout = timeout_sec or source.timeout_sec
     repo = RepositorioEventos(db, source.id)
     connector, normalizer = crear_pipeline(
-        source.key, url_api=source.url_api, timeout_sec=source.timeout_sec, ahora=clock_now
+        source.key, url_api=source.url_api, timeout_sec=timeout, ahora=clock_now
     )
     try:
         report = await run_sync(
@@ -211,7 +218,7 @@ async def sincronizar(
             repository=repo,
             since=since,
             retries=source.retries,
-            timeout_sec=source.timeout_sec,
+            timeout_sec=timeout,
         )
     except Exception as exc:  # noqa: BLE001 - nunca dejar la ejecución colgada
         report = SyncReport(error=f"Error inesperado: {exc}", http_status=0)
@@ -225,6 +232,8 @@ async def ejecutar_sincronizacion(
     triggered_by: str = "scheduled",
     actor_id: str | None = None,
     correlation_id: str | None = None,
+    desde: datetime | None = None,
+    timeout_sec: int | None = None,
 ) -> str:
     """Punto de entrada asíncrono (Celery / tarea en segundo plano).
 
@@ -246,7 +255,9 @@ async def ejecutar_sincronizacion(
                 correlation_id=correlation_id,
             )
 
-        run = await sincronizar(db, source, run, correlation_id=correlation_id)
+        run = await sincronizar(
+            db, source, run, correlation_id=correlation_id, desde=desde, timeout_sec=timeout_sec
+        )
         return run.id
 
 

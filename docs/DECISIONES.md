@@ -146,3 +146,19 @@ solo se registran los puntos grises.
     profundidad; quedan en el registro de la ejecución.
 - **Descartado:** esperar al IGP para tener datos (bloqueaba el resto del plan) y usar un
   conjunto de datos de ejemplo.
+
+## D16. Datasets: instantánea de eventos, versión por nombre e informe de calidad
+
+- **Decisión:** un dataset guarda la lista exacta de eventos (`dataset_events`), no solo la
+  consulta. Se versiona por nombre; al aprobarse queda inmutable (trigger). Las reglas de
+  limpieza son un conjunto fijo y explícito (duplicados exactos y posibles, solo
+  revisados, tipos de magnitud, magnitud mínima, sin profundidad: excluir / imputar con la
+  mediana / conservar), aplicadas en ese orden y contadas una por una en el informe. La
+  partición es temporal (fecha de corte), nunca aleatoria. Crear: Analista o Administrador;
+  aprobar: solo Administrador.
+- **Motivo:** reproducibilidad (PDF §10: "conservar dataset y configuración exactos") aunque
+  el catálogo crezca o se corrija, y evitar fuga de información futura en el ML.
+- **Costo:** una fila por evento y dataset (miles, no millones). Los "posibles duplicados"
+  (< 60 s y < 50 km) pueden ser réplicas reales: por eso solo se quitan si se pide.
+- **Descartado:** guardar solo la consulta (no reproducible), partición aleatoria (fuga de
+  datos en series temporales) e imputación silenciosa (se guarda método y valor).
