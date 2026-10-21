@@ -31,7 +31,7 @@
   /* Content */
   --content: #0f172a;
   --content-secondary: #475569;
-  --content-muted: #94a3b8;
+  --content-muted: #5f6b7d; /* 4,9:1 o más en todos los fondos claros (WCAG AA) */
 
   /* Border */
   --border: #e2e8f0;
@@ -106,7 +106,7 @@
 
   --content: #ffffff;
   --content-secondary: #a9bcd0;
-  --content-muted: #7e97ac;
+  --content-muted: #8ea6bb; /* 5,1:1 o más en todos los fondos oscuros (WCAG AA) */
 
   --border: #1f4a7a;
   --border-strong: #2b5c8f;

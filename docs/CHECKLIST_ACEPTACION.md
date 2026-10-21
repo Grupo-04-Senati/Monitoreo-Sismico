@@ -7,13 +7,13 @@ columna dice qué). Estado al 2026-10-21, versión candidata de la Fase 9.
 | # | Criterio (PDF §14) | Evidencia | Cómo se verifica | Estado |
 |---|---|---|---|---|
 | 1 | Se despliega desde instrucciones documentadas y configuración de entorno | `docs/DESPLIEGUE.md`, `infra/prod/`, `.env.prod.example` | Automático: trabajo `despliegue` del CI levanta todo en modo producción con HTTPS y hace prueba de humo | ✔ |
-| 2 | Los eventos muestran proveedor, hora, ubicación, magnitud, profundidad y enlace de procedencia | Módulo Eventos (`DetalleEventoModal`, `FranjaProcedencia`) | Manual: abrir un sismo en Eventos y seguir su enlace al USGS | ✔ (manual) |
+| 2 | Los eventos muestran proveedor, hora, ubicación, magnitud, profundidad y enlace de procedencia | Módulo Eventos (`DetalleEventoModal`, `FranjaProcedencia`) | Automático: `e2e/03-eventos.spec.ts` abre un sismo y verifica su enlace al USGS | ✔ |
 | 3 | La ingesta no duplica al repetirse y registra cada ejecución y error | `tests/ingestion/test_idempotency.py`, `tests/api/test_ingesta_bd.py`, `ingestion_runs` | Automático (motor) + local con base (extremo a extremo) | ✔ |
-| 4 | Dashboard, mapa y gráficas respetan filtros y coinciden con la API | Resúmenes calculados en la API (`/events/compact`, `/analytics`, `/dashboard/summary`) | Manual: aplicar un filtro y comparar el total con Eventos | Manual pendiente: no hay prueba automática de interfaz |
+| 4 | Dashboard, mapa y gráficas respetan filtros y coinciden con la API | Resúmenes calculados en la API (`/events/compact`, `/analytics`, `/dashboard/summary`) | Automático en Eventos: `apps/web/e2e/03-eventos.spec.ts` comprueba que el total en pantalla = API = archivo del USGS. Dashboard y mapa: manual | ✔ Eventos · manual en Dashboard y mapa |
 | 5 | Los modelos registran dataset, periodo, features, versión, métricas y limitaciones | `ml_experiments` (dataset, features, métricas, semilla, versiones de librerías, limitaciones), `model_registry` (versión, limitaciones) | Automático: `tests/api/test_ml_bd.py` (local con base) | ✔ |
 | 6 | Las estimaciones no se confunden con alertas oficiales | Etiqueta y color violeta, `categoria=estimacion_experimental`, aviso fijo (D18); los avisos son `aviso_interno` (D19) | Automático: `test_estimaciones_bd.py`, `test_alertas_bd.py` + manual visual | ✔ |
 | 7 | Las reglas permiten probar condiciones, evitar duplicados y consultar la entrega | Simulación retrospectiva, restricción única sismo/regla, entregas por canal (D19) | Automático: `test_alertas_reglas.py`, `test_alertas_bd.py` | ✔ |
-| 8 | Los roles bloquean funciones en la interfaz y en la API | `core/permissions.py`, `RouteGuard` en el frontend | Automático en la API: `test_autorizacion.py` (5 roles × cada ruta, en el CI). Manual en la interfaz: entrar como Analista y comprobar que no aparece Configuración | ✔ |
+| 8 | Los roles bloquean funciones en la interfaz y en la API | `core/permissions.py`, `RouteGuard` en el frontend | Automático en la API: `test_autorizacion.py` (5 roles × cada ruta, en el CI). En la interfaz: `e2e/02-roles.spec.ts` (Analista y Operador) | ✔ |
 | 9 | Los reportes muestran fecha de corte, filtros, fuente y solicitante | `services/reports` (cabecera con metadatos), `report_jobs.requested_by` | Manual: generar un reporte y revisar su cabecera | ✔ (manual) |
 | 10 | Existen pruebas, backup probado, guía de operación y procedimiento de incidente | 370+ pruebas, CI; `infra/backup` con simulacro (en el CI); `docs/DESPLIEGUE.md`; `docs/MANUAL_TECNICO.md` §8 | Automático: CI (pruebas + simulacro de restauración) | ✔ |
 
@@ -34,11 +34,13 @@ columna dice qué). Estado al 2026-10-21, versión candidata de la Fase 9.
 
 ## Pendiente antes de una entrega formal
 
-- [ ] Prueba de interfaz automatizada (E2E) de los flujos principales: iniciar sesión,
-      filtrar eventos, crear y simular una regla, aprobar un aviso.
+- [x] Prueba de interfaz automatizada (E2E): 13 flujos en `apps/web/e2e` (acceso, roles,
+      eventos, reglas y avisos, configuración), en el CI en cada cambio.
 - [ ] Prueba de carga (p. ej. 50 usuarios concurrentes sobre Eventos y Dashboard).
-- [ ] Revisión de accesibilidad con un lector de pantalla y contraste (PDF §13).
-- [ ] Semilla de sismos en el CI para que las pruebas con datos corran en GitHub.
+- [x] Accesibilidad automática (PDF §13): axe-core con reglas WCAG 2.1 A/AA en 15 pantallas
+      sin hallazgos, uso con teclado y cierre de diálogos con Esc (`e2e/06-accesibilidad.spec.ts`).
+- [ ] Revisión manual con un lector de pantalla (NVDA o Narrador) de los flujos principales.
+- [x] Muestra real del USGS en el CI (`tests/fixtures`): corren las pruebas de alertas y eventos.
 - [ ] Actualizar `react-router` a la v7 (avisos moderados de `npm audit`) y revisar lo que
       reporte `pip-audit`.
 - [ ] Validar con especialistas el significado de cada indicador (PDF §6).
