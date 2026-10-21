@@ -5,8 +5,8 @@ Todo se calcula en SQL sobre las tablas reales (`seismic_events`,
 (`app.core.clock.now()`), de modo que el resumen es coherente entre backend y
 frontend.
 
-Las alertas (módulo del compañero) aún no tienen tabla: `active_alerts` se
-devuelve como `null` (no hay dato), nunca como un cero fijo presentado como real.
+`active_alerts` cuenta los avisos internos que piden acción: pendientes de
+aprobación, aprobados aún sin entregar o con alguna entrega fallida (D19).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.clock import now as clock_now
 from app.core.permissions import require_permission
 from app.db.database import get_db
-from app.db.models import DataSource, IngestionRun, RunStatus, SeismicEvent, User
+from app.db.models import Alert, AlertStatus, DataSource, IngestionRun, RunStatus, SeismicEvent, User
 
 router = APIRouter()
 
@@ -68,6 +68,16 @@ async def dashboard_summary(
         ).scalar_one()
     )
 
+    por_atender = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Alert)
+                .where(Alert.status.in_([AlertStatus.PENDIENTE_APROBACION, AlertStatus.APROBADA, AlertStatus.FALLIDA]))
+            )
+        ).scalar_one()
+    )
+
     return {
         "total_events": total,
         "recent_events": recientes,
@@ -76,6 +86,6 @@ async def dashboard_summary(
         "last_sync": ultima_sync.isoformat() if ultima_sync else None,
         "active_sources": fuentes_activas,
         "failed_runs": fallidas,
-        "active_alerts": None,
+        "active_alerts": por_atender,
         "generated_at": ahora.isoformat(),
     }

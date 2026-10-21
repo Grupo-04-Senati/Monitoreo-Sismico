@@ -138,6 +138,8 @@ registrar_auditoria(
 - Cada aviso trae `categoria = "aviso_interno"`, nombre de la regla, resumen del evento y
   sus entregas (`entregada`, `simulada` o `fallida`). Plantillas con marcadores
   `{magnitud} {tipo} {lugar} {fecha} {profundidad} {distancia} {zona} {regla} {enlace}`.
+- `GET /api/v1/dashboard/summary` → `active_alerts`: avisos que piden acción
+  (`pendiente_aprobacion`, `aprobada` sin entregar o `fallida`).
 
 ## 8. Datos y estados
 
