@@ -653,3 +653,119 @@ class RiskEstimate(Base):
         Index("ix_risk_estimates_model", "model_id"),
     )
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# Reglas y centro de alertas (módulos 6.8 y 6.9)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class AlertStatus(str):
+    PENDIENTE_APROBACION = "pendiente_aprobacion"
+    APROBADA = "aprobada"
+    ENVIADA = "enviada"
+    FALLIDA = "fallida"
+    CANCELADA = "cancelada"
+    #: El evento coincidió, pero la regla ya había avisado dentro de su cooldown.
+    SUPRIMIDA = "suprimida"
+
+
+class AlertRule(Base):
+    """Regla de aviso interno (PDF §6.8 y §7 `alert_rules`).
+
+    Se crea inactiva; solo un Administrador la activa (aprobador). `condition_json`
+    y `zone_spec` se validan en `app/schemas/alertas.py`.
+    """
+
+    __tablename__ = "alert_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500))
+    condition_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    zone_spec: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    channels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    recipients: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=3600)
+    requires_approval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    #: Solo se avisa de eventos con menos de esta antigüedad (evita avisos por cargas históricas).
+    max_event_age_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
+    title_template: Mapped[str] = mapped_column(String(200), nullable=False)
+    message_template: Mapped[str] = mapped_column(String(1000), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("severity IN ('informativa', 'importante', 'critica')", name="ck_alert_rules_severity"),
+        CheckConstraint("cooldown_seconds >= 0", name="ck_alert_rules_cooldown"),
+        CheckConstraint("max_event_age_hours BETWEEN 1 AND 720", name="ck_alert_rules_antiguedad"),
+    )
+
+
+class Alert(Base):
+    """Aviso interno generado por una regla para un evento (PDF §6.9 y §7 `alerts`).
+
+    Uno por evento y regla (deduplicación garantizada por la base).
+    """
+
+    __tablename__ = "alerts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    rule_id: Mapped[str] = mapped_column(String(36), ForeignKey("alert_rules.id", ondelete="RESTRICT"), nullable=False)
+    event_id: Mapped[str] = mapped_column(String(36), ForeignKey("seismic_events.id", ondelete="RESTRICT"), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    message: Mapped[str] = mapped_column(String(1200), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    distance_km: Mapped[float | None] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_reason: Mapped[str | None] = mapped_column(String(300))
+    acknowledged_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("event_id", "rule_id", name="uq_alerts_event_rule"),
+        CheckConstraint(
+            "status IN ('pendiente_aprobacion', 'aprobada', 'enviada', 'fallida', 'cancelada', 'suprimida')",
+            name="ck_alerts_status",
+        ),
+        Index("ix_alerts_created_at", "created_at"),
+        Index("ix_alerts_rule_created", "rule_id", "created_at"),
+        Index("ix_alerts_status", "status"),
+    )
+
+
+class AlertDelivery(Base):
+    """Entrega de un aviso por un canal a un destino (PDF §7 `alert_deliveries`)."""
+
+    __tablename__ = "alert_deliveries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    alert_id: Mapped[str] = mapped_column(String(36), ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False)
+    #: "app" | "email"
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: "bandeja" para la app; correo del destinatario para email.
+    destination: Mapped[str] = mapped_column(String(255), nullable=False)
+    #: "entregada" | "simulada" (canal desactivado: no se envió) | "fallida"
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(String(300))
+
+    __table_args__ = (
+        UniqueConstraint("alert_id", "channel", "destination", name="uq_alert_deliveries_destino"),
+        CheckConstraint("status IN ('entregada', 'simulada', 'fallida')", name="ck_alert_deliveries_status"),
+    )
+
