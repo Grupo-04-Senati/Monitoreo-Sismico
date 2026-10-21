@@ -101,6 +101,17 @@ registrar_auditoria(
   guardada. Partición: `dataset_events.split` (`entrenamiento` antes de `split_date`,
   `prueba` desde `split_date`).
 
+## 7c. Modelos de ML
+
+- `POST /api/v1/ml/experiments` (permiso `modelos`) entrena sobre un dataset **aprobado**
+  y guarda el experimento en una sola inserción (la tabla no admite UPDATE). Un fallo
+  también se guarda (`status = fallido`, `error`).
+- Tareas: `conteo_semanal` (D2) y `regresion_lineal` (didáctica). Métricas en la partición
+  de prueba del dataset; `algorithm` es el de menor MAE, aunque sea una referencia.
+- `POST /api/v1/ml/models/{experiment_id}/approve` (solo Administrador) registra el modelo
+  en `model_registry`; se rechaza si el mejor resultado es una referencia.
+- El modelo entrenado se guarda en `services/ml/artifacts/<id>.joblib` (no se versiona).
+
 ## 8. Datos y estados
 
 - Nada de datos de ejemplo ni valores inventados. Si falta un dato: `null` y la UI muestra
