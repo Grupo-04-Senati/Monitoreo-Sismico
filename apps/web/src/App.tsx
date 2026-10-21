@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router";
 import { AuthProvider } from "@/app/auth/AuthContext";
 import { RouteGuard } from "@/app/guards/RouteGuard";
 import ForbiddenPage from "@/app/guards/ForbiddenPage";

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import { SOURCE_NAME } from "@/config/fuente";
 import { DATA_RANGE_LABEL } from "@/lib/ancla";

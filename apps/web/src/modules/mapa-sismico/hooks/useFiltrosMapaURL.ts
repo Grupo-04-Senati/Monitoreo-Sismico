@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import type { FiltrosMapa } from "../types";
 import {
   FILTROS_POR_DEFECTO,

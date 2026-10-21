@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, type FormEvent, type MouseEvent as ReactMouseEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import ParticleBackground from "@/components/background/ParticleBackground";
 import PeruMap from "@/components/background/PeruMap";

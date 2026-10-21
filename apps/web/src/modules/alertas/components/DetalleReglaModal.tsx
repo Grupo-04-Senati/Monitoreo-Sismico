@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import ExpandModal from "@/components/ui/ExpandModal";
 import { fmtDateTimeUTC5 } from "@/lib/format";
 import type { Regla } from "../types";

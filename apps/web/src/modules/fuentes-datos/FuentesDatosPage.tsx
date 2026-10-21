@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import { SOURCE_NAME } from "@/config/fuente";
 import { fmtTimeUTC5 } from "@/lib/format";
