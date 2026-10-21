@@ -31,6 +31,7 @@ from app.db.models import (
     User,
 )
 from app.schemas.ml import ExperimentCreateIn
+from app.services import revisiones
 from app.services.audit import registrar_auditoria
 from app.services.ml_bridge import (
     ErrorEntrenamiento,
@@ -48,24 +49,32 @@ async def _filas_dataset(db: AsyncSession, dataset: Dataset) -> list[dict]:
     """Eventos congelados del dataset con su partición y la imputación aplicada."""
     imputacion = (dataset.quality_report or {}).get("imputacion", {})
     valor = imputacion.get("valor") if imputacion.get("metodo") == "mediana" else None
-    resultado = await db.execute(
-        select(DatasetEvent.split, SeismicEvent)
-        .join(SeismicEvent, SeismicEvent.id == DatasetEvent.event_id)
-        .where(DatasetEvent.dataset_id == dataset.id)
-        .order_by(SeismicEvent.occurred_at)
-    )
-    return [
-        {
-            "split": split,
-            "occurred_at": e.occurred_at,
-            "latitude": e.latitude,
-            "longitude": e.longitude,
-            "depth_km": valor if e.depth_km is None and valor is not None else e.depth_km,
-            "magnitude": e.magnitude,
-            "magnitude_type": e.magnitude_type,
-        }
-        for split, e in resultado.all()
-    ]
+    resultado = (
+        await db.execute(
+            select(DatasetEvent.split, SeismicEvent)
+            .join(SeismicEvent, SeismicEvent.id == DatasetEvent.event_id)
+            .where(DatasetEvent.dataset_id == dataset.id)
+            .order_by(SeismicEvent.occurred_at)
+        )
+    ).all()
+    # Valores tal como eran al crear el dataset: las correcciones posteriores de la
+    # fuente no cambian lo que se congeló (D27).
+    antes = await revisiones.valores_a_la_fecha(db, [e.id for _, e in resultado], dataset.created_at)
+    filas = []
+    for split, e in resultado:
+        profundidad = revisiones.valor(e, "depth_km", antes)
+        filas.append(
+            {
+                "split": split,
+                "occurred_at": revisiones.valor(e, "occurred_at", antes),
+                "latitude": revisiones.valor(e, "latitude", antes),
+                "longitude": revisiones.valor(e, "longitude", antes),
+                "depth_km": valor if profundidad is None and valor is not None else profundidad,
+                "magnitude": revisiones.valor(e, "magnitude", antes),
+                "magnitude_type": revisiones.valor(e, "magnitude_type", antes),
+            }
+        )
+    return sorted(filas, key=lambda f: f["occurred_at"])
 
 
 def _entrenar(tarea: str, dataset: Dataset, filas: list[dict], semilla: int) -> Resultado:

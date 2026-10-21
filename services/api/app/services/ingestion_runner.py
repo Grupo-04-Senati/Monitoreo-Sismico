@@ -20,6 +20,7 @@ from app.core.clock import now as clock_now
 
 from app.db.database import AsyncSessionLocal
 from app.db.models import DataSource, IngestionLog, IngestionRun, RunStatus, SeismicEvent
+from app.services import revisiones
 from app.services.ingestion_bridge import (
     NormalizedEvent,
     SyncReport,
@@ -38,7 +39,8 @@ class RepositorioEventos:
         self.db = db
         self.source_id = source_id
 
-    async def upsert(self, event: NormalizedEvent) -> bool:
+    async def upsert(self, event: NormalizedEvent) -> bool | str:
+        """Inserta el evento; si ya existe y la fuente lo corrigió, aplica la revisión (D27)."""
         stmt = (
             pg_insert(SeismicEvent)
             .values(
@@ -58,11 +60,23 @@ class RepositorioEventos:
                 review_status=event.review_status,
                 origin_hash=event.origin_hash,
                 raw_payload=event.raw,
+                source_updated_at=event.source_updated_at,
             )
             .on_conflict_do_nothing(index_elements=["source_id", "external_id"])
         )
         result = await self.db.execute(stmt)
-        return result.rowcount == 1
+        if result.rowcount == 1:
+            return True
+        actual = (
+            await self.db.execute(
+                select(SeismicEvent).where(
+                    SeismicEvent.source_id == self.source_id, SeismicEvent.external_id == event.external_id
+                )
+            )
+        ).scalar_one_or_none()
+        if actual is not None and await revisiones.aplicar(self.db, actual, event):
+            return "actualizado"
+        return False
 
 
 async def obtener_fuente(db: AsyncSession, id_o_key: str) -> DataSource | None:
@@ -182,6 +196,7 @@ async def finalizar_ejecucion(db: AsyncSession, run: IngestionRun, report: SyncR
     run.http_status = report.http_status
     run.records_read = report.leidos
     run.records_inserted = report.insertados
+    run.records_updated = report.actualizados
     run.duplicates_skipped = report.duplicados
     run.attempts = report.intentos
     run.status = report.estado
@@ -224,7 +239,7 @@ async def sincronizar(
     except Exception as exc:  # noqa: BLE001 - nunca dejar la ejecución colgada
         report = SyncReport(error=f"Error inesperado: {exc}", http_status=0)
     run = await finalizar_ejecucion(db, run, report)
-    if report.insertados:
+    if report.insertados or report.actualizados:
         # Avisos internos de los eventos de esta ejecución. Un fallo del motor de
         # alertas nunca debe romper la ingesta: se registra y se sigue.
         from app.services.alertas_motor import evaluar_insertados_desde

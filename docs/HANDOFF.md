@@ -112,8 +112,8 @@ npm run build
 - **Regiones**: departamento derivado de las coordenadas y capa oficial en el mapa (D24).
   Tras actualizar una instalación con datos previos: `python -m app.scripts.asignar_regiones`.
   Pendiente: mapa propio en el Dashboard (hoy remite al Mapa sísmico).
-- **Ingesta**: fuente USGS funcionando (D15). Pendiente: aplicar revisiones de eventos ya
-  guardados y el IGP como segunda fuente.
+- **Ingesta**: fuente USGS funcionando (D15) con correcciones de la fuente aplicadas e
+  historial de revisiones (D27). Pendiente: el IGP como segunda fuente.
 
 ### 4.3 Pruebas faltantes (backlog)
 - [x] **403 por rol**: matriz de los 5 roles en `tests/api/test_autorizacion.py`.

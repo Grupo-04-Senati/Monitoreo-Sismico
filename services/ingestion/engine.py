@@ -28,9 +28,10 @@ MAX_INTENTOS_EXTRA = 2
 
 
 class EventRepository(Protocol):
-    """Destino de la ingesta. `upsert` devuelve `True` si insertó una fila nueva."""
+    """Destino de la ingesta. `upsert` devuelve `True` (o "insertado") si insertó una fila
+    nueva, "actualizado" si aplicó una revisión de la fuente y `False` si ya la tenía."""
 
-    async def upsert(self, event: NormalizedEvent) -> bool:
+    async def upsert(self, event: NormalizedEvent) -> bool | str:
         ...
 
 
@@ -91,7 +92,9 @@ async def run_sync(
             report.error = f"Error al persistir: {exc}"
             report.http_status = 206
             return report
-        if insertado:
+        if insertado == "actualizado":
+            report.actualizados += 1
+        elif insertado:
             report.insertados += 1
         else:
             report.duplicados += 1

@@ -106,6 +106,7 @@ class UsgsNormalizer:
             locality=str(lugar)[:160] if lugar else None,
             source_url=str(url)[:500] if url else None,
             review_status=estado,
+            source_updated_at=_desde_ms(props.get("updated")),
             received_at=None,
             origin_hash=origin_hash(
                 source_key=self.source_key,

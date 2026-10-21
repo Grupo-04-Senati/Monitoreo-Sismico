@@ -16,7 +16,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -152,8 +152,18 @@ async def evaluar_eventos(db: AsyncSession, eventos: list[SeismicEvent], *, ahor
 
 
 async def evaluar_insertados_desde(db: AsyncSession, desde: datetime) -> int:
-    """Evalúa los eventos insertados desde `desde` (los de la última sincronización)."""
-    eventos = list((await db.execute(select(SeismicEvent).where(SeismicEvent.created_at >= desde))).scalars())
+    """Evalúa los eventos insertados **o corregidos** desde `desde` (última sincronización).
+
+    Un sismo corregido (p. ej. de M4.9 a M5.1) puede cumplir ahora una regla: se evalúa
+    de nuevo; la restricción única evento-regla impide avisar dos veces (D27).
+    """
+    eventos = list(
+        (
+            await db.execute(
+                select(SeismicEvent).where(or_(SeismicEvent.created_at >= desde, SeismicEvent.revised_at >= desde))
+            )
+        ).scalars()
+    )
     return await evaluar_eventos(db, eventos)
 
 

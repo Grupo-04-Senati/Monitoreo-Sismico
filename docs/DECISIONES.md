@@ -358,3 +358,25 @@ solo se registran los puntos grises.
 - **Descartado:** caché en Redis (serializar y transferir 2 MB cuesta casi lo mismo que
   recalcular) e invalidar por tiempo largo sin mirar las sincronizaciones.
 
+## D27. Correcciones de la fuente con historial y datasets a su fecha
+
+- **Decisión:** el USGS corrige eventos días o semanas después (magnitud, ubicación,
+  profundidad, paso de "automático" a "revisado"). En las sincronizaciones normales (la
+  anterior fue hace menos de 60 días) se le piden los eventos de los últimos 60 días
+  **modificados** desde la última sincronización (`updatedafter`). Si un evento guardado
+  llega con fecha de modificación (`properties.updated`) más nueva y valores distintos, se
+  actualiza y la versión anterior y la nueva quedan en `seismic_event_revisions` (solo
+  inserción, trigger). Una versión más vieja se ignora. Los datasets aprobados y los
+  modelos leen los valores tal como eran al crear el dataset. Un evento corregido se
+  vuelve a evaluar contra las reglas de aviso (sin duplicar avisos).
+- **Motivo:** PDF §6.2 (el proveedor puede revisar o corregir eventos) y §7. Antes, las
+  correcciones se perdían (solo se insertaba lo nuevo, con 6 h de solape). Verificado con el
+  servicio real: el 2026-10-21 había 5 eventos de la zona corregidos más de 2 días después
+  de ocurrir (uno de Huacho, del 25-09, corregido el 15-10).
+- **Costo:** una corrección de un evento de hace más de 60 días no se recoge (habría que
+  pedir más historial en cada sincronización). Si la sincronización se detuvo más de 60
+  días, la siguiente vuelve al modo por fecha de ocurrencia. La pantalla de Fuentes de
+  datos aún no muestra el contador de corregidos (la API ya lo entrega).
+- **Descartado:** sobrescribir sin historial (rompe datasets y modelos congelados, D16 y
+  D17) y copiar todos los valores en cada dataset (duplica el catálogo).
+

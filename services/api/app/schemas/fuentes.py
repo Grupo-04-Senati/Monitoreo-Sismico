@@ -80,6 +80,8 @@ class RunOut(BaseModel):
     http_status: int | None = None
     records_read: int
     records_inserted: int
+    #: Correcciones de la fuente aplicadas (D27).
+    records_updated: int = 0
     duplicates_skipped: int
     attempts: int
     error_summary: str | None = None

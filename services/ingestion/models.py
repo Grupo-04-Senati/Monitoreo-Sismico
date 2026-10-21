@@ -40,6 +40,9 @@ class NormalizedEvent:
     #: "observado" | "pendiente_validacion".
     review_status: str = "observado"
     raw: dict[str, Any] = field(default_factory=dict)
+    #: Última modificación del evento en la fuente (USGS `properties.updated`). Una versión
+    #: con fecha más nueva y valores distintos se aplica como revisión (D27).
+    source_updated_at: datetime | None = None
 
 
 @dataclass
@@ -48,6 +51,8 @@ class SyncReport:
 
     leidos: int = 0
     insertados: int = 0
+    #: Eventos ya guardados que la fuente corrigió (revisiones aplicadas, D27).
+    actualizados: int = 0
     duplicados: int = 0
     rechazados: int = 0
     latencia_ms: int = 0
