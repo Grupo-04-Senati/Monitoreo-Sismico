@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import uuid
 
 from sqlalchemy import func, select
@@ -43,6 +44,11 @@ app = FastAPI(
     version="0.1.0",
     description="API para monitoreo de eventos sísmicos, análisis y alertas",
 )
+
+# Comprime las respuestas grandes (el catálogo de eventos: ~580 KB → ~110 KB por
+# página de 1000). Además de acelerar la carga, evita los cortes ECONNRESET que el
+# proxy de desarrollo de Vite produce en Windows con cuerpos grandes.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.add_middleware(
     CORSMiddleware,
