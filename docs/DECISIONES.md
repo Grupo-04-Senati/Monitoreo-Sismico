@@ -225,3 +225,25 @@ solo se registran los puntos grises.
 - **Descartado:** activar reglas sin aprobación, enviar correo real por defecto y avisar
   automáticamente sobre estimaciones.
 
+## D20. Configuración: parámetros reales, control de cambios y retención con piso en la base
+
+- **Decisión:** solo son editables (por el Administrador) los parámetros que algún módulo
+  usa de verdad: vigencia de los reportes (`reportes_ttl_horas`, 24 h), umbral de datos
+  desactualizados de las estimaciones (`estimaciones_horas_datos_recientes`, 48 h) y
+  retención de la auditoría (`auditoria_retencion_dias`, 730 días). Se guardan en
+  `system_settings`; sin fila rige el valor por defecto. Cada cambio queda en la auditoría
+  con antes/después y se muestra como historial (control de cambios). Lo que vive en
+  `.env` (secretos, CORS, cookies, SMTP) se muestra en solo lectura, sin secretos, con
+  advertencias (p. ej. clave de sesión de desarrollo). La retención se aplica con una
+  **purga manual** del Administrador, con vista previa y auditada; el trigger de
+  `audit_logs` solo permite ese DELETE dentro de la purga y nunca para registros de menos
+  de 365 días (UPDATE y TRUNCATE siguen prohibidos). La exportación CSV de la auditoría
+  (Administrador y Auditor) también queda auditada, con filtros y número de filas.
+- **Motivo:** PDF §6.13 (historial protegido, retención configurable, exportación
+  auditada, control de cambios, parámetros del sistema) y §12 (política de retención).
+- **Costo:** la IP no se registra (minimización de datos; el PDF la deja "según
+  política"). Sin purga programada: se ejecuta a mano. Los límites de acceso (intentos de
+  login) quedan fijos en el código y se muestran, no se editan desde la web.
+- **Descartado:** editar secretos o variables de entorno desde la web, parámetros sin
+  efecto real y borrar auditoría sin piso mínimo.
+

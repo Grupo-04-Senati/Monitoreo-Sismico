@@ -31,6 +31,7 @@ from app.db.models import (
     SeismicEvent,
     User,
 )
+from app.services import configuracion
 from app.services.audit import registrar_auditoria
 from app.services.calidad_datos import FilaEvento, Reglas, preparar
 from app.services.ml_bridge import carpeta_artefactos, conteos_semanales, inferencia_conteo, inicio_semana
@@ -41,7 +42,7 @@ DISCLAIMER = (
     "del IGP ni de INDECI."
 )
 METRICA = "sismos_por_semana"
-#: Si la última ingesta correcta es más antigua, la estimación lo advierte.
+#: Valor por defecto; el vigente es el parámetro `estimaciones_horas_datos_recientes`.
 HORAS_DATOS_RECIENTES = 48
 
 
@@ -130,9 +131,10 @@ async def crear(
     ultima = await db.scalar(
         select(func.max(IngestionRun.finished_at)).where(IngestionRun.status.in_(("correcta", "con_errores")))
     )
-    if ultima is None or (ahora - ultima) > timedelta(hours=HORAS_DATOS_RECIENTES):
+    horas_recientes = await configuracion.valor(db, "estimaciones_horas_datos_recientes")
+    if ultima is None or (ahora - ultima) > timedelta(hours=horas_recientes):
         advertencias.append(
-            f"La última sincronización correcta tiene más de {HORAS_DATOS_RECIENTES} h: las semanas previas pueden estar incompletas."
+            f"La última sincronización correcta tiene más de {horas_recientes} h: las semanas previas pueden estar incompletas."
         )
     ancho = resultado["superior"] - resultado["inferior"]
     if resultado["valor"] and ancho > 2 * resultado["valor"]:

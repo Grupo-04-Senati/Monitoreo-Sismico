@@ -27,6 +27,7 @@ from app.routers import (
     reportes,
     usuarios,
     auditoria,
+    configuracion,
 )
 from app.services.audit import esperar_auditoria
 
@@ -91,6 +92,7 @@ app.include_router(reportes.router, prefix=f"{API_PREFIX}/reports", tags=["repor
 app.include_router(usuarios.router, prefix=f"{API_PREFIX}/users", tags=["usuarios"])
 app.include_router(usuarios.roles_router, prefix=API_PREFIX, tags=["usuarios"])
 app.include_router(auditoria.router, prefix=f"{API_PREFIX}/audit-logs", tags=["auditoria"])
+app.include_router(configuracion.router, prefix=f"{API_PREFIX}/settings", tags=["configuracion"])
 
 
 @app.get("/health")
