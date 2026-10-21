@@ -147,11 +147,20 @@ def test_primera_sincronizacion_pide_la_ventana_inicial():
     assert (p["minlatitude"], p["maxlatitude"]) == ("-18.6", "0.5")
 
 
-def test_sincronizacion_incremental_usa_solape():
+def test_sincronizacion_incremental_pide_lo_modificado_con_solape():
+    """Sincronización normal: lo modificado desde la última (menos 6 h) en los últimos 60 días."""
     c = _ConectorFijo({"features": []})
     desde = datetime(2026, 10, 19, 10, 0, tzinfo=timezone.utc)
     c.fetch(desde)
-    assert _params(c.urls[0])["starttime"] == "2026-10-19T04:00:00"
+    p = _params(c.urls[0])
+    assert len(c.urls) == 1 and p["updatedafter"] == "2026-10-19T04:00:00"
+    assert p["starttime"] == (_AHORA - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def test_carga_historica_no_usa_updatedafter():
+    c = _ConectorFijo({"features": []})
+    c.fetch(_AHORA - timedelta(days=200))
+    assert all("updatedafter" not in _params(u) for u in c.urls)
 
 
 def test_respuesta_sin_features_es_error():

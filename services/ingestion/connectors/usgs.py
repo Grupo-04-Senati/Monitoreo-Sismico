@@ -9,6 +9,10 @@ voladuras de cantera y explosiones).
   `ventana_inicial_dias` días.
 - Siguientes: trae desde `since` menos `solape_horas`, para recoger eventos que
   el USGS publica con retraso. Los repetidos los descarta la idempotencia.
+- Sincronización normal (la última fue hace menos de `ventana_revisiones_dias`): se
+  piden los eventos de esa ventana **modificados** desde la última sincronización
+  (`updatedafter`). Así llegan los nuevos y también las correcciones que el USGS
+  publica días después (magnitud, ubicación, revisión), que se aplican al guardar (D27).
 - Rangos largos (carga histórica) se piden por tramos de `dias_por_tramo` días,
   y cada tramo se reintenta ante cortes de red: una sola descarga grande es
   frágil con una conexión inestable.
@@ -54,6 +58,7 @@ class UsgsConnector:
         solape_horas: int = 6,
         dias_por_tramo: int = 365,
         intentos_por_tramo: int = 3,
+        ventana_revisiones_dias: int = 60,
         ahora: Callable[[], datetime] = _ahora_utc,
         pausa: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -63,6 +68,7 @@ class UsgsConnector:
         self.solape_horas = solape_horas
         self.dias_por_tramo = dias_por_tramo
         self.intentos_por_tramo = intentos_por_tramo
+        self.ventana_revisiones_dias = ventana_revisiones_dias
         self.ahora = ahora
         self.pausa = pausa
 
@@ -91,7 +97,11 @@ class UsgsConnector:
         """Parámetros de la consulta que empieza en `inicio(since)` (y acaba en `fin`)."""
         return self._params(self.inicio(since), fin)
 
-    def _params(self, inicio: datetime, fin: datetime | None) -> dict[str, str]:
+    def modo_actualizados(self, since: datetime | None) -> bool:
+        """Sincronización normal y reciente: pedir lo modificado, no solo lo nuevo."""
+        return since is not None and self.ahora() - since <= timedelta(days=self.ventana_revisiones_dias)
+
+    def _params(self, inicio: datetime, fin: datetime | None, actualizados_desde: datetime | None = None) -> dict[str, str]:
         params = {
             "format": "geojson",
             "eventtype": "earthquake",
@@ -105,6 +115,8 @@ class UsgsConnector:
         }
         if fin is not None:
             params["endtime"] = self._fmt(fin)
+        if actualizados_desde is not None:
+            params["updatedafter"] = self._fmt(actualizados_desde)
         return params
 
     def _get_json(self, url: str) -> dict[str, Any]:
@@ -124,8 +136,10 @@ class UsgsConnector:
             # Cortes a mitad de descarga (IncompleteRead), reinicios y timeouts.
             raise ConnectorError(f"Conexión con el USGS interrumpida ({type(exc).__name__})") from exc
 
-    def _features_de_tramo(self, inicio: datetime, fin: datetime | None) -> list[dict[str, Any]]:
-        url = f"{self.url}?{urllib.parse.urlencode(self._params(inicio, fin))}"
+    def _features_de_tramo(
+        self, inicio: datetime, fin: datetime | None, actualizados_desde: datetime | None = None
+    ) -> list[dict[str, Any]]:
+        url = f"{self.url}?{urllib.parse.urlencode(self._params(inicio, fin, actualizados_desde))}"
         for intento in range(1, self.intentos_por_tramo + 1):
             try:
                 datos = self._get_json(url)
@@ -147,8 +161,15 @@ class UsgsConnector:
     def fetch(self, since: datetime | None) -> list[RawRecord]:
         registros: list[RawRecord] = []
         vistos: set[str] = set()
-        for inicio, fin in self.tramos(since):
-            for f in self._features_de_tramo(inicio, fin):
+        if self.modo_actualizados(since):
+            consultas = [(
+                self.ahora() - timedelta(days=self.ventana_revisiones_dias), None,
+                since - timedelta(hours=self.solape_horas),  # type: ignore[operator]
+            )]
+        else:
+            consultas = [(inicio, fin, None) for inicio, fin in self.tramos(since)]
+        for inicio, fin, actualizados_desde in consultas:
+            for f in self._features_de_tramo(inicio, fin, actualizados_desde):
                 if isinstance(f, dict) and f.get("id") and str(f["id"]) not in vistos:
                     vistos.add(str(f["id"]))
                     registros.append(RawRecord(external_id=str(f["id"]), payload=f))

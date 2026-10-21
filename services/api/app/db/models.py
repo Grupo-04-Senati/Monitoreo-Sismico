@@ -204,6 +204,8 @@ class IngestionRun(Base):
 
     records_read: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     records_inserted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    #: Eventos ya guardados que la fuente corrigió en esta ejecución (D27).
+    records_updated: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     duplicates_skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
@@ -289,6 +291,11 @@ class SeismicEvent(Base):
     origin_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     #: Payload original, para trazabilidad (nunca contiene secretos).
     raw_payload: Mapped[dict | None] = mapped_column(JSON)
+    #: Última modificación del evento en la fuente (USGS `properties.updated`).
+    source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Cuándo se aplicó la última corrección de la fuente y cuántas van (D27).
+    revised_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revision_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -787,3 +794,23 @@ class SystemSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class SeismicEventRevision(Base):
+    """Versión anterior de un evento que la fuente corrigió (D27). **Solo inserción**.
+
+    Permite saber qué cambió y reconstruir los valores de un evento a una fecha: los
+    datasets aprobados y sus modelos leen los valores tal como eran al crearse.
+    """
+
+    __tablename__ = "seismic_event_revisions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    event_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("seismic_events.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    revised_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    before_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    after_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+

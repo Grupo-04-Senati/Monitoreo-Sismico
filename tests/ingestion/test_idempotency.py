@@ -120,3 +120,34 @@ def test_ejecucion_fallida_tras_agotar_reintentos() -> None:
 
 async def _noop(_segundos: float) -> None:
     return None
+
+
+def test_el_motor_cuenta_las_correcciones_de_la_fuente():
+    """Un repositorio que responde "actualizado" suma a `actualizados`, no a duplicados (D27)."""
+
+    class _RepoRevisiones:
+        def __init__(self) -> None:
+            self.respuestas = iter([True, "actualizado", False])
+
+        async def upsert(self, event) -> bool | str:  # noqa: ANN001
+            return next(self.respuestas)
+
+    from ingestion.connectors.base import RawRecord as _Raw
+    from ingestion.engine import run_sync as _run_sync
+
+    class _Conector:
+        def fetch(self, since):  # noqa: ANN001
+            return [_Raw(external_id=f"x{i}", payload={}) for i in range(3)]
+
+    class _Normalizador:
+        def normalize(self, raw):  # noqa: ANN001
+            from ingestion.normalizers.base import NormalizationResult
+
+            return NormalizationResult(event=NormalizedEvent(
+                external_id=raw.external_id, occurred_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
+                latitude=-12.0, longitude=-77.0, depth_km=10.0, magnitude=4.5, magnitude_type="mb",
+                region=None, origin_hash=raw.external_id,
+            ))
+
+    reporte = asyncio.run(_run_sync(connector=_Conector(), normalizer=_Normalizador(), repository=_RepoRevisiones(), since=None))
+    assert (reporte.insertados, reporte.actualizados, reporte.duplicados) == (1, 1, 1)

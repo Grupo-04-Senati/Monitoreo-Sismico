@@ -34,8 +34,10 @@ Navegador ──HTTPS──► Caddy ──┬── /            → frontend c
 ## 3. Flujos principales
 
 1. **Ingesta**: beat programa la sincronización → el worker consulta el USGS por tramos,
-   normaliza y guarda sin duplicar (`source_id` + `external_id`). Cada ejecución queda en
-   `ingestion_runs` con sus registros y errores.
+   normaliza y guarda sin duplicar (`source_id` + `external_id`). En las sincronizaciones
+   normales también trae lo que el USGS **corrigió** en los últimos 60 días y lo aplica,
+   guardando la versión anterior (D27). Cada ejecución queda en `ingestion_runs` con sus
+   registros (nuevos, corregidos, repetidos) y errores.
 2. **Avisos**: tras cada sincronización con sismos nuevos, el motor evalúa las reglas
    activas (magnitud, profundidad, zona), deduplica por sismo y regla, respeta la espera
    entre avisos y deja el aviso pendiente de aprobación o lo entrega (D19).

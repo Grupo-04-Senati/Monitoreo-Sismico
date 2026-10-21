@@ -92,8 +92,15 @@ registrar_auditoria(
 
 ## 7. Ingesta
 
-- Idempotencia por `(source_id, external_id)` (`INSERT ... ON CONFLICT DO NOTHING`).
-- La marca incremental es el fin de la última ejecución finalizada (`ingestion_runs`).
+- Idempotencia por `(source_id, external_id)`. Si el evento ya existe y la fuente trae
+  una versión con `source_updated_at` más nueva y valores distintos, se aplica como
+  revisión: la versión anterior queda en `seismic_event_revisions` (solo inserción) y la
+  ejecución cuenta `records_updated` (D27). El repositorio devuelve `True`, `"actualizado"`
+  o `False`.
+- La marca incremental es el fin de la última ejecución finalizada (`ingestion_runs`). Si es
+  de los últimos 60 días, el USGS se consulta con `updatedafter` (nuevos y corregidos).
+- Datasets y modelos leen los valores de sus eventos **a la fecha de creación del dataset**
+  (`app.services.revisiones.valores_a_la_fecha`): las correcciones no cambian lo congelado.
 - Normalizador de referencia: `services/ingestion/normalizers/igp.py`.
 - Evento normalizado (`services/ingestion/models.py`): incluye `source_url` opcional.
 - Carga histórica: `python -m app.scripts.sincronizar --fuente usgs --desde AAAA-MM-DD`

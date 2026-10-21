@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.clock import now as clock_now
 from app.db.models import DataSource, Dataset, DatasetEvent, DatasetStatus, SeismicEvent, User
 from app.schemas.datasets import DatasetCreateIn
+from app.services import revisiones
 from app.services.audit import registrar_auditoria
 from app.services.calidad_datos import FilaEvento, Reglas, preparar
 
@@ -187,22 +188,25 @@ async def filas(
     ).all()
     imputacion = (dataset.quality_report or {}).get("imputacion", {})
     valor = imputacion.get("valor") if imputacion.get("metodo") == "mediana" else None
+    # Valores tal como eran al crear el dataset (las correcciones posteriores no lo cambian, D27).
+    antes = await revisiones.valores_a_la_fecha(db, [e.id for _, e in resultado], dataset.created_at)
     items = []
     for split_fila, e in resultado:
-        imputada = e.depth_km is None and valor is not None
+        profundidad = revisiones.valor(e, "depth_km", antes)
+        imputada = profundidad is None and valor is not None
         items.append(
             {
                 "event_id": e.id,
                 "external_id": e.external_id,
                 "split": split_fila,
-                "occurred_at": e.occurred_at,
-                "latitude": e.latitude,
-                "longitude": e.longitude,
-                "depth_km": valor if imputada else e.depth_km,
+                "occurred_at": revisiones.valor(e, "occurred_at", antes),
+                "latitude": revisiones.valor(e, "latitude", antes),
+                "longitude": revisiones.valor(e, "longitude", antes),
+                "depth_km": valor if imputada else profundidad,
                 "depth_imputada": imputada,
-                "magnitude": e.magnitude,
-                "magnitude_type": e.magnitude_type,
-                "review_status": e.review_status,
+                "magnitude": revisiones.valor(e, "magnitude", antes),
+                "magnitude_type": revisiones.valor(e, "magnitude_type", antes),
+                "review_status": revisiones.valor(e, "review_status", antes),
             }
         )
     return items, total
