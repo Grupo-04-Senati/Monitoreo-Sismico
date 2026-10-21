@@ -3,6 +3,7 @@ import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { downloadFile } from "@/lib/export";
 import { buildXlsx } from "@/lib/xlsx";
 import { SOURCE_NAME } from "@/config/fuente";
+import { invalidarCatalogo } from "@/modules/eventos/services/eventos.service";
 import type {
   CalidadCampo,
   ConfiguracionFuente,
@@ -387,6 +388,8 @@ export async function sincronizarAhora(): Promise<ResultadoSincronizacion> {
     const p = await apiGet<RunsPageAPI>(`/sources/${id}/runs?pagina=1&tamano=50`);
     const run = p.items.find((r) => r.id === runId);
     if (run && run.status !== "en_curso") {
+      // Puede haber eventos nuevos: las demás pantallas deben volver a pedirlos.
+      invalidarCatalogo();
       return {
         id: run.id,
         inicioUtc: run.started_at,

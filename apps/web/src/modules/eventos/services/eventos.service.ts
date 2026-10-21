@@ -76,20 +76,63 @@ function queryEventos(filtros: FiltrosEventos): string {
   return qs.toString();
 }
 
+/* ════ Descarga de listas completas ════
+   Varias pantallas filtran y agregan en cliente sobre el catálogo completo. Para
+   que no tarde con miles de eventos: páginas de 1000 (el máximo de la API), las
+   siguientes en paralelo, y una caché corta compartida entre pantallas que además
+   une peticiones iguales simultáneas (p. ej. tabla y resumen de Eventos). */
+
+/** Tamaño de página para descargar listas completas (máximo que admite la API). */
+const PAGINA_COMPLETA = 1000;
+/** Cuánto se reutiliza una descarga. La ingesta programada corre cada 15 min. */
+const VIGENCIA_MS = 60_000;
+/** Consultas distintas que se guardan a la vez. */
+const MAX_ENTRADAS = 20;
+
+const cache = new Map<string, { hasta: number; promesa: Promise<EventoSismico[]> }>();
+
+async function descargarTodos(base: string): Promise<EventoSismico[]> {
+  const sep = base ? "&" : "";
+  const url = (pagina: number) => `/events?${base}${sep}page=${pagina}&page_size=${PAGINA_COMPLETA}&sort=-occurred_at`;
+  const primera = await apiGet<{ items: EventOutAPI[]; total: number }>(url(1));
+  const paginas = Math.ceil(primera.total / PAGINA_COMPLETA);
+  const resto = await Promise.all(
+    Array.from({ length: Math.max(0, paginas - 1) }, (_, i) =>
+      apiGet<{ items: EventOutAPI[]; total: number }>(url(i + 2)),
+    ),
+  );
+  // Si entra un evento nuevo entre páginas, uno puede repetirse en el borde: se quita.
+  const porId = new Map<string, EventoSismico>();
+  for (const data of [primera, ...resto]) {
+    for (const e of data.items) porId.set(e.id, adaptarEvento(e));
+  }
+  return [...porId.values()];
+}
+
+async function conCache(base: string): Promise<EventoSismico[]> {
+  const ahora = Date.now();
+  for (const [clave, entrada] of cache) if (entrada.hasta <= ahora) cache.delete(clave);
+  let entrada = cache.get(base);
+  if (!entrada) {
+    if (cache.size >= MAX_ENTRADAS) cache.delete(cache.keys().next().value as string);
+    const promesa = descargarTodos(base);
+    entrada = { hasta: ahora + VIGENCIA_MS, promesa };
+    cache.set(base, entrada);
+    // Un error no se guarda: el siguiente intento vuelve a pedir.
+    promesa.catch(() => cache.delete(base));
+  }
+  // Copia: quien la reciba puede reordenarla sin afectar a las demás pantallas.
+  return (await entrada.promesa).slice();
+}
+
+/** Descarta las listas guardadas (p. ej. tras sincronizar una fuente). */
+export function invalidarCatalogo(): void {
+  cache.clear();
+}
+
 /** Todos los eventos que cumplen los filtros (no solo la página). */
 async function cargarFiltrados(filtros: FiltrosEventos): Promise<EventoSismico[]> {
-  const base = queryEventos(filtros);
-  const filas: EventoSismico[] = [];
-  let pagina = 1;
-  for (;;) {
-    const sep = base ? "&" : "";
-    const data = await apiGet<{ items: EventOutAPI[]; total: number }>(
-      `/events?${base}${sep}page=${pagina}&page_size=200&sort=-occurred_at`,
-    );
-    filas.push(...data.items.map(adaptarEvento));
-    if (filas.length >= data.total || data.items.length === 0) return filas;
-    pagina += 1;
-  }
+  return conCache(queryEventos(filtros));
 }
 
 /**
@@ -97,14 +140,7 @@ async function cargarFiltrados(filtros: FiltrosEventos): Promise<EventoSismico[]
  * filtran en cliente (mapa sísmico) para garantizar paridad con el catálogo.
  */
 export async function cargarCatalogo(): Promise<EventoSismico[]> {
-  const filas: EventoSismico[] = [];
-  let pagina = 1;
-  for (;;) {
-    const data = await apiGet<{ items: EventOutAPI[]; total: number }>(`/events?page=${pagina}&page_size=200&sort=-occurred_at`);
-    filas.push(...data.items.map(adaptarEvento));
-    if (filas.length >= data.total || data.items.length === 0) return filas;
-    pagina += 1;
-  }
+  return conCache("");
 }
 
 function paginar(filas: EventoSismico[], numero: number, tamano: number): PaginaEventos {  const t = Math.max(1, Math.floor(tamano) || 10);
