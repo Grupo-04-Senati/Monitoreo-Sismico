@@ -769,3 +769,21 @@ class AlertDelivery(Base):
         CheckConstraint("status IN ('entregada', 'simulada', 'fallida')", name="ck_alert_deliveries_status"),
     )
 
+
+
+class SystemSetting(Base):
+    """Parámetro operativo editable (PDF §6.13 "parámetros del sistema").
+
+    Solo claves del catálogo `app.services.configuracion.PARAMETROS`; si una clave
+    no tiene fila, rige su valor por defecto. Cada cambio queda en `audit_logs`
+    con antes/después (control de cambios).
+    """
+
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSON, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(String(36))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

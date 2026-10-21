@@ -77,7 +77,10 @@ registrar_auditoria(
 - Si no se pasa `correlation_id`, toma el de la petición en curso (`X-Correlation-ID`).
 - Al apagar la API o al final de un script: `await esperar_auditoria()`.
 - Consulta: `GET /api/v1/audit-logs` (permiso `auditoria`), paginado, con filtros
-  `actor_id`, `action`, `entity_type`, `entity_id`, `from`, `to`.
+  `actor_id`, `action`, `entity_type`, `entity_id`, `from`, `to`; cada fila trae
+  `actor_name` y `actor_email`. `GET /audit-logs/facets` da acciones, entidades y usuarios.
+- `GET /audit-logs/export` (mismos filtros, tope 50 000 filas): CSV UTF-8. La exportación
+  se audita como `auditoria_exportada`.
 
 ## 6. Tiempo
 
@@ -140,6 +143,14 @@ registrar_auditoria(
   `{magnitud} {tipo} {lugar} {fecha} {profundidad} {distancia} {zona} {regla} {enlace}`.
 - `GET /api/v1/dashboard/summary` → `active_alerts`: avisos que piden acción
   (`pendiente_aprobacion`, `aprobada` sin entregar o `fallida`).
+
+## 7f. Configuración
+
+- `/api/v1/settings` (permiso `configuracion`, solo Administrador): `GET` (parámetros y
+  entorno sin secretos), `PUT /{clave}` (`{valor}`; fuera de rango 422, igual 409),
+  `GET /history` (cambios y purgas), `GET /audit-retention` (vista previa) y
+  `POST /audit-retention/purge`. Ver D20.
+- Leer un parámetro desde el backend: `await configuracion.valor(db, "clave")`.
 
 ## 8. Datos y estados
 

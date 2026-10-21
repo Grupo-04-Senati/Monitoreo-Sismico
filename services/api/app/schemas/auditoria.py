@@ -20,6 +20,9 @@ class AuditLogOut(BaseModel):
     after_json: dict[str, Any] | None
     occurred_at: datetime
     correlation_id: str | None
+    #: Nombre y correo actuales del usuario (None si es el sistema o se eliminó).
+    actor_name: str | None = None
+    actor_email: str | None = None
 
 
 class AuditLogListOut(BaseModel):
@@ -27,3 +30,17 @@ class AuditLogListOut(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ActorFacetOut(BaseModel):
+    id: str
+    nombre: str | None
+    email: str | None
+
+
+class AuditFacetsOut(BaseModel):
+    acciones: list[str]
+    entidades: list[str]
+    actores: list[ActorFacetOut]
+    total: int
+    mas_antiguo: datetime | None

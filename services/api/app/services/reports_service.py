@@ -27,6 +27,7 @@ from app.schemas.reportes import (
     ReportTipoEstadoOut,
     ReportTypeOut,
 )
+from app.services import configuracion
 from app.services.audit import registrar_auditoria
 from app.services.reports import obtener_proveedor
 from app.services.reports.base import ReportParams
@@ -49,6 +50,7 @@ ETIQUETAS_ESTADO: dict[str, str] = {
 }
 
 #: Horas que vive un enlace antes de expirar.
+#: Valor por defecto; el vigente es el parámetro `reportes_ttl_horas` (Configuración).
 TTL_HORAS = 24
 #: Un enlace se resalta como "por expirar" cuando le quedan menos de estas horas.
 UMBRAL_POR_EXPIRAR_HORAS = 6
@@ -215,7 +217,8 @@ async def generar_reporte(db: AsyncSession, job: ReportJob) -> ReportJob:
         job.row_count = len(data.filas)
         job.status = ReportStatus.LISTO
         job.finished_at = _ahora()
-        job.expires_at = _ahora() + timedelta(hours=TTL_HORAS)
+        ttl = await configuracion.valor(db, "reportes_ttl_horas")
+        job.expires_at = _ahora() + timedelta(hours=ttl)
         job.error = None
         await db.commit()
         registrar_auditoria(
@@ -223,7 +226,7 @@ async def generar_reporte(db: AsyncSession, job: ReportJob) -> ReportJob:
             action="reporte_generado",
             entity_type="report_job",
             entity_id=job.id,
-            after={"filas": job.row_count, "formato": job.formato, "expira_en_horas": TTL_HORAS},
+            after={"filas": job.row_count, "formato": job.formato, "expira_en_horas": ttl},
         )
     except Exception as exc:  # noqa: BLE001 - se refleja en el trabajo
         job.status = ReportStatus.FALLIDO

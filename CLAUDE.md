@@ -105,8 +105,8 @@ incluye los comandos de verificación y la lista de **pruebas pendientes**:
 ## 8. Qué te toca a ti (Dueño B)
 
 1. Preparación de datos, Modelos ML, Estimaciones y Reglas/Centro de alertas están
-   completos. Auditoría tiene API (falta su pantalla); Configuración está en blanco. Ver `docs/HANDOFF.md` §4.1.
-2. ~~Crear la tabla `audit_logs`~~ (hecho, migración `0011`). Falta la pantalla de
-   Auditoría, la retención configurable y la exportación auditada.
+   completos. Auditoría y Configuración tienen API (D20); faltan sus pantallas. Ver `docs/HANDOFF.md` §4.1.
+2. ~~Crear la tabla `audit_logs`~~ (hecho, migración `0011`). Retención y exportación
+   auditada hechas (D20); faltan las pantallas de Auditoría y Configuración.
 3. Nunca presentar una estimación de ML como alerta oficial.
 4. Si necesitas tocar algo compartido o del Dueño A: abre un issue / avisa, no lo reescribas.

@@ -74,6 +74,13 @@ RUTAS_B: list[tuple[str, str, str]] = [
     ("POST", "/api/v1/alerts/x/acknowledge", "alertas"),
     ("POST", "/api/v1/alerts/x/retry", "alertas"),
     ("GET", "/api/v1/audit-logs", "auditoria"),
+    ("GET", "/api/v1/audit-logs/facets", "auditoria"),
+    ("GET", "/api/v1/audit-logs/export", "auditoria"),
+    ("GET", "/api/v1/settings", "configuracion"),
+    ("GET", "/api/v1/settings/history", "configuracion"),
+    ("GET", "/api/v1/settings/audit-retention", "configuracion"),
+    ("POST", "/api/v1/settings/audit-retention/purge", "configuracion"),
+    ("PUT", "/api/v1/settings/reportes_ttl_horas", "configuracion"),
 ]
 
 
