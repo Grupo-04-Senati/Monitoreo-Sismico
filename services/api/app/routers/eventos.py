@@ -10,13 +10,14 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import require_permission
 from app.db.database import get_db
 from app.db.models import User
 from app.schemas.eventos import EventDetailOut, EventGeoJSONOut, EventListOut
-from app.services.events import listar_eventos, listar_eventos_geojson, obtener_evento
+from app.services.events import listar_eventos, listar_eventos_compacto, listar_eventos_geojson, obtener_evento
 
 router = APIRouter()
 
@@ -58,6 +59,43 @@ async def listar(
         sort=sort,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get("/compact")
+async def compacto(
+    desde: str | None = Query(default=None, alias="from", max_length=40),
+    hasta: str | None = Query(default=None, alias="to", max_length=40),
+    mag_min: float | None = Query(default=None, ge=0, le=10),
+    mag_max: float | None = Query(default=None, ge=0, le=10),
+    mag_type: Literal["Mw", "ML", "mb", "none"] | None = Query(default=None),
+    depth_min: float | None = Query(default=None, ge=0, le=750),
+    depth_max: float | None = Query(default=None, ge=0, le=750),
+    region: str | None = Query(default=None, max_length=64),
+    review_status: Literal["observado", "pendiente_validacion"] | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=80),
+    db: AsyncSession = Depends(get_db),
+    _: User = _VER,
+) -> JSONResponse:
+    """Catálogo completo filtrado en filas compactas `{columnas, filas, total}`.
+
+    Mismos filtros y valores que `GET /events`, sin paginar y ordenado por fecha
+    descendente. Se devuelve tal cual (sin validar fila por fila) por rendimiento.
+    """
+    return JSONResponse(
+        await listar_eventos_compacto(
+            db,
+            desde=desde,
+            hasta=hasta,
+            mag_min=mag_min,
+            mag_max=mag_max,
+            mag_type=mag_type,
+            depth_min=depth_min,
+            depth_max=depth_max,
+            region=region,
+            review_status=review_status,
+            q=q,
+        )
     )
 
 

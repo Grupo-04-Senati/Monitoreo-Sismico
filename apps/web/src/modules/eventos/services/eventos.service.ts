@@ -59,12 +59,17 @@ function adaptarEvento(e: EventOutAPI): EventoSismico {
   };
 }
 
+const MINUTO = 60_000;
+
 /** Traduce los filtros a la query string de `GET /events`. */
 function queryEventos(filtros: FiltrosEventos): string {
   const { start, end } = periodBounds(filtros.periodo || "30d", filtros.desde, filtros.hasta);
   const qs = new URLSearchParams();
-  if (Number.isFinite(start)) qs.set("from", new Date(start).toISOString());
-  if (Number.isFinite(end)) qs.set("to", new Date(end).toISOString());
+  // Los periodos relativos (24 h, 7 d, 30 d) parten del reloj real, que cambia en
+  // cada llamada: se redondean al minuto (inicio hacia abajo, fin hacia arriba)
+  // para que la caché reconozca la misma consulta.
+  if (Number.isFinite(start)) qs.set("from", new Date(Math.floor(start / MINUTO) * MINUTO).toISOString());
+  if (Number.isFinite(end)) qs.set("to", new Date(Math.ceil(end / MINUTO) * MINUTO).toISOString());
   if (filtros.region) qs.set("region", filtros.region);
   if (filtros.magnitudMin != null) qs.set("mag_min", String(filtros.magnitudMin));
   if (filtros.magnitudMax != null) qs.set("mag_max", String(filtros.magnitudMax));
@@ -78,12 +83,17 @@ function queryEventos(filtros: FiltrosEventos): string {
 
 /* ════ Descarga de listas completas ════
    Varias pantallas filtran y agregan en cliente sobre el catálogo completo. Para
-   que no tarde con miles de eventos: páginas de 1000 (el máximo de la API), las
-   siguientes en paralelo, y una caché corta compartida entre pantallas que además
-   une peticiones iguales simultáneas (p. ej. tabla y resumen de Eventos). */
+   que no tarde con miles de eventos se pide el catálogo **compacto**
+   (`GET /events/compact`: una sola respuesta en filas, con los mismos valores que
+   `GET /events`), y una caché corta compartida entre pantallas une además las
+   peticiones iguales simultáneas (p. ej. tabla y resumen de Eventos). */
 
-/** Tamaño de página para descargar listas completas (máximo que admite la API). */
-const PAGINA_COMPLETA = 1000;
+interface CatalogoCompactoAPI {
+  columnas: (keyof EventOutAPI)[];
+  filas: unknown[][];
+  total: number;
+}
+
 /** Cuánto se reutiliza una descarga. La ingesta programada corre cada 15 min. */
 const VIGENCIA_MS = 60_000;
 /** Consultas distintas que se guardan a la vez. */
@@ -94,35 +104,28 @@ const LIMITE_MS = 30_000;
 const cache = new Map<string, { hasta: number; promesa: Promise<EventoSismico[]> }>();
 
 async function descargarTodos(base: string): Promise<EventoSismico[]> {
-  const sep = base ? "&" : "";
-  const url = (pagina: number) => `/events?${base}${sep}page=${pagina}&page_size=${PAGINA_COMPLETA}&sort=-occurred_at`;
   // Una petición colgada (p. ej. si la API se reinicia a mitad) no debe dejar la
   // pantalla cargando para siempre: se cancela y la pantalla muestra su error.
   const control = new AbortController();
   const limite = setTimeout(() => control.abort(), LIMITE_MS);
-  const opciones = { signal: control.signal };
-  let primera: { items: EventOutAPI[]; total: number };
-  let resto: { items: EventOutAPI[]; total: number }[];
+  let datos: CatalogoCompactoAPI;
   try {
-    primera = await apiGet<{ items: EventOutAPI[]; total: number }>(url(1), opciones);
-    const paginas = Math.ceil(primera.total / PAGINA_COMPLETA);
-    resto = await Promise.all(
-      Array.from({ length: Math.max(0, paginas - 1) }, (_, i) =>
-        apiGet<{ items: EventOutAPI[]; total: number }>(url(i + 2), opciones),
-      ),
-    );
+    datos = await apiGet<CatalogoCompactoAPI>(`/events/compact${base ? `?${base}` : ""}`, { signal: control.signal });
   } catch (error) {
     if (control.signal.aborted) throw new ApiError(0, "La API tardó demasiado en responder. Reintente.");
     throw error;
   } finally {
     clearTimeout(limite);
   }
-  // Si entra un evento nuevo entre páginas, uno puede repetirse en el borde: se quita.
-  const porId = new Map<string, EventoSismico>();
-  for (const data of [primera, ...resto]) {
-    for (const e of data.items) porId.set(e.id, adaptarEvento(e));
-  }
-  return [...porId.values()];
+  // Cada fila se rearma con los nombres de `columnas` y pasa por la misma
+  // conversión que un evento de `GET /events`.
+  return datos.filas.map((fila) => {
+    const evento: Record<string, unknown> = {};
+    datos.columnas.forEach((columna, i) => {
+      evento[columna] = fila[i];
+    });
+    return adaptarEvento(evento as unknown as EventOutAPI);
+  });
 }
 
 async function conCache(base: string): Promise<EventoSismico[]> {
