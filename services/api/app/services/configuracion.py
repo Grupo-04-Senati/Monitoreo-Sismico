@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import now as clock_now
 from app.core.config import settings
-from app.db.models import AuditLog, SystemSetting, User
+from app.db.models import AuditLog, DataSource, SystemSetting, User
 from app.services import login_throttle
 from app.services.audit import registrar_auditoria
 from app.services.auditoria_consulta import nombres
@@ -213,7 +213,7 @@ async def purgar(db: AsyncSession, actor: User, *, correlation_id: str | None) -
 # ── Entorno (solo lectura, sin secretos) ────────────────────────────────────
 
 
-def entorno() -> dict[str, Any]:
+async def entorno(db: AsyncSession) -> dict[str, Any]:
     produccion = settings.ENV == "production"
     advertencias = []
     if settings.API_SECRET_KEY == "dev-secret-change-me":
@@ -226,7 +226,8 @@ def entorno() -> dict[str, Any]:
         advertencias.append("El correo de avisos está activado pero faltan SMTP_HOST o SMTP_FROM: las entregas fallarán.")
     return {
         "entorno": settings.ENV,
-        "fuente_activa": settings.INGESTION_SOURCE_KEY,
+        # Las fuentes reales salen de la base (INGESTION_SOURCE_KEY es un resto sin uso).
+        "fuentes_activas": list((await db.execute(select(DataSource.name).where(DataSource.enabled.is_(True)).order_by(DataSource.name))).scalars()),
         "origenes_cors": settings.CORS_ORIGINS,
         "cookies_seguras": settings.COOKIE_SECURE,
         "sesion_minutos": settings.ACCESS_TOKEN_EXPIRE_MINUTES,

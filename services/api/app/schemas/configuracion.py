@@ -41,7 +41,7 @@ class EntornoOut(BaseModel):
     """Lo que vive en `.env`: se muestra sin secretos y no se edita desde la web."""
 
     entorno: str
-    fuente_activa: str
+    fuentes_activas: list[str]
     origenes_cors: list[str]
     cookies_seguras: bool
     sesion_minutos: int

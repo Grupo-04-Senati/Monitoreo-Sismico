@@ -85,19 +85,20 @@ npm run build
 
 ### 4.1 Módulos del Dueño B
 - **Preparación de datos**: API y pantalla listas (`/api/v1/datasets`, D16).
-- **Auditoría**: API lista con nombres, filtros y exportación auditada (D14, D20); falta la pantalla.
+- **Auditoría**: API y pantalla listas (filtros, detalle antes/después, exportación auditada; D14, D20).
 - **Modelos ML**: API y pantalla listas (`/api/v1/ml`, D17).
 - **Estimaciones**: API y pantalla listas (`/api/v1/estimates`, D18).
 - **Reglas y Centro de alertas**: API y pantallas listas (`/api/v1/alert-rules`,
   `/api/v1/alerts`, D19). Correo SMTP desactivado por defecto (entregas `simulada`). El
   Dashboard muestra los avisos por atender (`active_alerts`).
-- **Configuración**: API lista (`/api/v1/settings`, D20); falta la pantalla.
+- **Configuración**: API y pantalla listas (`/api/v1/settings`, D20). `INGESTION_SOURCE_KEY` ya no se usa:
+  las fuentes activas salen de `data_sources`.
 - No tocar sin avisar; el núcleo ya deja los puntos de integración (`registrar_auditoria`,
   `permissions.py`, `models.py`).
 
 ### 4.2 Pendientes del núcleo / dependencias externas
-- **Auditoría**: retención configurable con purga protegida y exportación auditada (D20);
-  falta su pantalla.
+- **Auditoría**: retención configurable con purga manual protegida (D20). Pendiente: purga
+  programada si la empresa la exige.
 - **GeoJSON de regiones**: el mapa dibuja "Capa base pendiente" hasta tener geometría real.
 - **Ingesta**: fuente USGS funcionando (D15). Pendiente: aplicar revisiones de eventos ya
   guardados, derivar el departamento (`region`) y el IGP como segunda fuente.

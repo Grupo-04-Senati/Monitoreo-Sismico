@@ -23,7 +23,7 @@ def _correlacion(request: Request) -> str | None:
 
 @router.get("", response_model=ConfiguracionOut)
 async def get_settings(db: AsyncSession = Depends(get_db)) -> ConfiguracionOut:
-    return ConfiguracionOut(parametros=await servicio.listar(db), entorno=servicio.entorno())
+    return ConfiguracionOut(parametros=await servicio.listar(db), entorno=await servicio.entorno(db))
 
 
 @router.get("/history", response_model=list[CambioOut])
