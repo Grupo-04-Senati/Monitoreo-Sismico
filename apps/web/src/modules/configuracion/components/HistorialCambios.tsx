@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import Card from "@/components/ui/Card";
 import { fmtDateTimeUTC5 } from "@/lib/format";
 import type { Cambio } from "../types";

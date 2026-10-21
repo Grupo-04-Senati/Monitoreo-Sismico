@@ -262,7 +262,7 @@ solo se registran los puntos grises.
   del repositorio, HTTPS obligatorio).
 - **Costo:** en CI no hay sismos (la base empieza vacía): las pruebas que los necesitan se
   omiten solas y siguen corriendo en local. La auditoría de dependencias no bloquea:
-  hoy señala `react-router` 6 (moderada, se corrige con la v7, que rompe compatibilidad).
+  señalaba `react-router` 6 (moderada); se resolvió pasando a `react-router` 7.
   El CI solo bloquea fusiones si se activa la protección de la rama `main` en GitHub.
 - **Descartado:** descargar datos del USGS dentro del CI (lento e inestable) y bloquear
   por avisos de dependencias sin revisarlos.

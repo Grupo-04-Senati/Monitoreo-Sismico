@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ApiError } from "@/lib/api";
 import { IconCheck, IconInfo } from "@/components/ui/Icons";
 import type { Cambio, Configuracion, EstadoSistema, Parametro, Retencion } from "./types";

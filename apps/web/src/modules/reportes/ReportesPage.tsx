@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import { NOW } from "@/lib/ancla";
 import { REGION_OPTIONS } from "@/lib/catalogo";

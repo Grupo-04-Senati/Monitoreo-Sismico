@@ -41,7 +41,7 @@ columna dice qué). Estado al 2026-10-21, versión candidata de la Fase 9.
       sin hallazgos, uso con teclado y cierre de diálogos con Esc (`e2e/06-accesibilidad.spec.ts`).
 - [ ] Revisión manual con un lector de pantalla (NVDA o Narrador) de los flujos principales.
 - [x] Muestra real del USGS en el CI (`tests/fixtures`): corren las pruebas de alertas y eventos.
-- [ ] Actualizar `react-router` a la v7 (avisos moderados de `npm audit`) y revisar lo que
-      reporte `pip-audit`.
+- [x] `react-router` 7.18.4 (`npm audit`: 0 vulnerabilidades); las 17 E2E pasan.
+- [ ] Revisar lo que reporte `pip-audit` en el CI (trabajo Seguridad).
 - [ ] Validar con especialistas el significado de cada indicador (PDF §6).
 - [ ] Copiar las copias de seguridad fuera del servidor de producción.

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import ExpandModal from "@/components/ui/ExpandModal";
 import AreaChart from "@/components/charts/AreaChart";
 import HBarChart from "@/components/charts/HBarChart";

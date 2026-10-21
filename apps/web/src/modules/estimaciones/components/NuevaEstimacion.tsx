@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import Card from "@/components/ui/Card";
 import { IconEstimate, IconInfo } from "@/components/ui/Icons";
 import type { ModeloOpcion } from "../types";

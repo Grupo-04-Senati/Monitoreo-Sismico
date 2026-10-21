@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { NOW } from "@/lib/ancla";
 import { fmtTimeUTC5 } from "@/lib/format";
 import { SOURCE_NAME } from "@/config/fuente";

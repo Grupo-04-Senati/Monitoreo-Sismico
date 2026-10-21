@@ -5,7 +5,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { SOURCE_NAME } from "@/config/fuente";
 import { DATA_RANGE_LABEL } from "@/lib/ancla";
 import { fmtTimeUTC5 } from "@/lib/format";

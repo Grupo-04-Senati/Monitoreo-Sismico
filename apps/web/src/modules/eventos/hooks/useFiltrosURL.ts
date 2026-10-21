@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import type { CampoOrdenEventos, FiltrosEventos, OrdenEventos } from "../types";
 import {
   CLAVES_COLUMNAS,

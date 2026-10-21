@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import { ROLE_LABELS } from "@/types/auth";
 import { IconShield } from "@/components/ui/Icons";

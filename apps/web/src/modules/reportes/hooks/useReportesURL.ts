@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import type { ChipFiltro, FiltrosReportes } from "../types";
 import {
   SOLICITANTE_POR_DEFECTO,
