@@ -88,6 +88,18 @@ registrar_auditoria(
 - La marca incremental es el fin de la última ejecución finalizada (`ingestion_runs`).
 - Normalizador de referencia: `services/ingestion/normalizers/igp.py`.
 - Evento normalizado (`services/ingestion/models.py`): incluye `source_url` opcional.
+- Carga histórica: `python -m app.scripts.sincronizar --fuente usgs --desde AAAA-MM-DD`
+  (se pide por tramos de un año; no duplica lo ya guardado).
+
+## 7b. Datasets (Preparación de datos)
+
+- `POST /api/v1/datasets` (permiso `preparacion`) crea una **nueva versión** por nombre y
+  congela la lista de eventos en `dataset_events`. `POST /{id}/approve` solo Administrador.
+- Un dataset **aprobado es inmutable** (trigger). Para cambiarlo, nueva versión.
+- Quien entrene con un dataset debe leer sus eventos de `dataset_events` (no volver a
+  consultar `seismic_events`) y aplicar `quality_report.imputacion` tal como está
+  guardada. Partición: `dataset_events.split` (`entrenamiento` antes de `split_date`,
+  `prueba` desde `split_date`).
 
 ## 8. Datos y estados
 

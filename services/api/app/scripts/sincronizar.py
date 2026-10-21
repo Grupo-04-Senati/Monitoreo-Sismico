@@ -9,6 +9,9 @@ Uso (desde ``services/api``, con el entorno virtual activo)::
 
     python -m app.scripts.sincronizar              # todas las fuentes habilitadas
     python -m app.scripts.sincronizar --fuente usgs
+    python -m app.scripts.sincronizar --fuente usgs --desde 2000-01-01   # carga histórica
+
+La carga histórica no duplica lo ya guardado (idempotencia por evento).
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
@@ -25,7 +29,7 @@ from app.services.audit import esperar_auditoria, registrar_auditoria
 from app.services.ingestion_runner import ejecutar_sincronizacion
 
 
-async def _sincronizar(clave: str | None) -> int:
+async def _sincronizar(clave: str | None, desde: datetime | None = None) -> int:
     async with AsyncSessionLocal() as db:
         consulta = select(DataSource).where(DataSource.enabled.is_(True))
         if clave:
@@ -37,7 +41,13 @@ async def _sincronizar(clave: str | None) -> int:
 
     codigo = 0
     for fuente in fuentes:
-        run_id = await ejecutar_sincronizacion(fuente.id, triggered_by="cli")
+        run_id = await ejecutar_sincronizacion(
+            fuente.id,
+            triggered_by="cli",
+            desde=desde,
+            # Una carga histórica descarga mucho más que una incremental.
+            timeout_sec=180 if desde else None,
+        )
         async with AsyncSessionLocal() as db:
             run = await db.get(IngestionRun, run_id)
         registrar_auditoria(
@@ -45,7 +55,7 @@ async def _sincronizar(clave: str | None) -> int:
             action="fuente_sincronizar",
             entity_type="data_source",
             entity_id=fuente.id,
-            after={"run_id": run_id, "triggered_by": "cli"},
+            after={"run_id": run_id, "triggered_by": "cli", "desde": desde.date().isoformat() if desde else None},
         )
         if run is None:
             print(f"[{fuente.key}] sin ejecución registrada")
@@ -68,8 +78,13 @@ def main(argv: list[str] | None = None) -> int:
         description="Sincroniza las fuentes de datos sísmicos.",
     )
     parser.add_argument("--fuente", help="Clave de la fuente (por defecto: todas las habilitadas).")
+    parser.add_argument(
+        "--desde",
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc),
+        help="Carga histórica desde esta fecha (AAAA-MM-DD, UTC).",
+    )
     args = parser.parse_args(argv)
-    return asyncio.run(_sincronizar(args.fuente))
+    return asyncio.run(_sincronizar(args.fuente, args.desde))
 
 
 if __name__ == "__main__":

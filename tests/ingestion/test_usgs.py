@@ -165,6 +165,50 @@ def test_no_trunca_en_silencio_si_llega_al_limite():
         c.fetch(None)
 
 
+def test_rango_largo_se_pide_por_tramos_de_un_anio():
+    c = _ConectorFijo({"features": []})
+    c.fetch(datetime(2023, 10, 20, 12, 0, tzinfo=timezone.utc) + timedelta(hours=6))
+    tramos = [(_params(u)["starttime"], _params(u).get("endtime")) for u in c.urls]
+    assert tramos == [
+        ("2023-10-20T12:00:00", "2024-10-19T12:00:00"),
+        ("2024-10-19T12:00:00", "2025-10-19T12:00:00"),
+        ("2025-10-19T12:00:00", "2026-10-19T12:00:00"),  # 2024 es bisiesto: hace falta un tramo más
+        ("2026-10-19T12:00:00", None),  # el último tramo llega hasta hoy
+    ]
+
+
+def test_un_corte_de_red_se_reintenta_en_el_mismo_tramo():
+    class _Inestable(_ConectorFijo):
+        fallos = 2
+
+        def _get_json(self, url):
+            if self.fallos:
+                self.fallos -= 1
+                raise ConnectorError("Conexión con el USGS interrumpida (IncompleteRead)")
+            return super()._get_json(url)
+
+    pausas: list[float] = []
+    c = _Inestable({"features": [_feature()]}, pausa=pausas.append)
+    assert len(c.fetch(None)) == 1
+    assert pausas == [1, 2]
+
+
+def test_tras_agotar_intentos_el_error_sube_al_motor():
+    class _Caido(_ConectorFijo):
+        def _get_json(self, url):
+            raise ConnectorError("sin conexión")
+
+    with pytest.raises(ConnectorError):
+        _Caido({"features": []}, pausa=lambda _: None).fetch(None)
+
+
+def test_evento_en_el_borde_de_dos_tramos_no_se_repite():
+    c = _ConectorFijo({"features": [_feature("borde")]})
+    registros = c.fetch(datetime(2024, 10, 20, 12, 0, tzinfo=timezone.utc) + timedelta(hours=6))
+    assert len(c.urls) == 2
+    assert [r.external_id for r in registros] == ["borde"]
+
+
 def test_crear_pipeline_elige_por_clave():
     conector, normalizador = crear_pipeline("usgs")
     assert isinstance(conector, UsgsConnector) and isinstance(normalizador, UsgsNormalizer)
