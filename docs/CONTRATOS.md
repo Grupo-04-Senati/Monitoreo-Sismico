@@ -19,7 +19,7 @@ Formato estable:
 
 - `items`: la página de resultados.
 - `total`: total de coincidencias con el filtro (no de la página).
-- `page` (>= 1), `page_size` (1..200 en eventos).
+- `page` (>= 1), `page_size` (1..1000 en eventos; el frontend pide páginas de 1000).
 
 Algunas listas no paginadas (`/sources`, runs, logs) devuelven solo `{ items, total }`.
 Ver `services/api/app/schemas/*.py` (`EventListOut`, `ReportListOut`, `SourceListOut`, ...).

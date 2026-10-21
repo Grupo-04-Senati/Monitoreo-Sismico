@@ -38,7 +38,8 @@ async def listar(
     q: str | None = Query(default=None, max_length=80),
     sort: str = Query(default="-occurred_at", max_length=32),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=25, ge=1, le=200),
+    # Hasta 1 000: el frontend descarga el catálogo completo en pocas peticiones.
+    page_size: int = Query(default=25, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
     _: User = _VER,
 ) -> EventListOut:
