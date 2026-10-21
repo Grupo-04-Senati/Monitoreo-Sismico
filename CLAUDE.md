@@ -52,9 +52,9 @@ No las "arregles" sin hablar con el equipo:
    datos inventados.
 2. **El mapa muestra "Capa base pendiente".** No hay GeoJSON real cargado; dibujar
    fronteras aproximadas sería dato inventado (ver `docs/DECISIONES.md` D3).
-3. **`audit_logs` no existe todavía.** `registrar_auditoria(...)` **emite un log JSON**
-   (`sismo.audit`) y mantiene su **firma estable**; la tabla la creará el módulo Auditoría
-   de B sin cambiar la firma (D6).
+3. **La auditoría va a dos destinos.** `registrar_auditoria(...)` mantiene su **firma
+   estable**, emite el log JSON (`sismo.audit`) y guarda en `audit_logs`, tabla de **solo
+   inserción** (un trigger rechaza UPDATE/DELETE/TRUNCATE). Ver D6 y D14.
 4. **`PendienteConnector` no llama a ninguna API externa.** El conector real y la fuente
    única están "por validar" (D1). El normalizador IGP ya está listo para el formato.
 5. **`source_url` puede ser `null`.** Es la URL de procedencia por evento; si el proveedor
@@ -103,7 +103,7 @@ incluye los comandos de verificación y la lista de **pruebas pendientes**:
 
 1. Rellenar los módulos en blanco: Preparación de datos, Modelos ML, Estimaciones, Reglas de
    alertas, Centro de alertas, Auditoría y Configuración.
-2. Crear la tabla `audit_logs` y **persistir** lo que hoy emite `registrar_auditoria`
-   (misma firma).
+2. ~~Crear la tabla `audit_logs`~~ (hecho, migración `0011`). Falta la pantalla de
+   Auditoría, la retención configurable y la exportación auditada.
 3. Nunca presentar una estimación de ML como alerta oficial.
 4. Si necesitas tocar algo compartido o del Dueño A: abre un issue / avisa, no lo reescribas.

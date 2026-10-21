@@ -63,10 +63,16 @@ registrar_auditoria(
 
 - **Firma estable** (mantenerla). Campos: `actor_id`, `action`, `entity_type`,
   `entity_id`, `before`, `after`, `correlation_id`.
-- **Hoy**: escribe un log JSON por línea (`sismo.audit`), filtrando secretos
-  (`password`, `token`, `secret`, `mfa_secret`, ...).
-- **Pendiente (módulo Auditoría, Dueño B)**: persistir en la tabla `audit_logs`.
-  Al crearla, **solo cambia el destino**, no la firma.
+- Filtra secretos (`password`, `token`, `secret`, `mfa_secret`, ...) y va a dos destinos:
+  1. Log JSON por línea (`sismo.audit`), inmediato; es el respaldo si la base falla.
+  2. Tabla `audit_logs` (migración `0011`), de **solo inserción**: un trigger rechaza
+     `UPDATE`, `DELETE` y `TRUNCATE`.
+- Se llama **después** del `commit` (o antes de rechazar una petición), así que guarda con
+  su propia sesión, en segundo plano. Un fallo al guardar nunca tumba la operación.
+- Si no se pasa `correlation_id`, toma el de la petición en curso (`X-Correlation-ID`).
+- Al apagar la API o al final de un script: `await esperar_auditoria()`.
+- Consulta: `GET /api/v1/audit-logs` (permiso `auditoria`), paginado, con filtros
+  `actor_id`, `action`, `entity_type`, `entity_id`, `from`, `to`.
 
 ## 6. Tiempo
 

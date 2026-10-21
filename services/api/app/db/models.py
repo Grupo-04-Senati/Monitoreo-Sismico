@@ -391,3 +391,36 @@ class ReportJob(Base):
         Index("ix_report_jobs_status", "status"),
         Index("ix_report_jobs_tipo", "tipo"),
     )
+
+
+class AuditLog(Base):
+    """Bitácora de auditoría (PDF §6.13 y §7). **Solo inserción**: un trigger en
+    la base rechaza UPDATE, DELETE y TRUNCATE (migración `0011_audit_logs`).
+
+    `actor_id` no es clave foránea a propósito: el registro debe sobrevivir
+    aunque la cuenta se elimine. `before_json`/`after_json` nunca contienen
+    secretos (los filtra `registrar_auditoria`).
+    """
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    actor_id: Mapped[str | None] = mapped_column(String(36))
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_id: Mapped[str | None] = mapped_column(String(64))
+    before_json: Mapped[dict | None] = mapped_column(JSON)
+    after_json: Mapped[dict | None] = mapped_column(JSON)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    correlation_id: Mapped[str | None] = mapped_column(String(64))
+
+    __table_args__ = (
+        Index("ix_audit_logs_occurred_at", "occurred_at"),
+        Index("ix_audit_logs_entity", "entity_type", "entity_id"),
+        Index("ix_audit_logs_actor", "actor_id"),
+        Index("ix_audit_logs_action", "action"),
+    )

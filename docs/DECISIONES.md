@@ -49,7 +49,7 @@ solo se registran los puntos grises.
   español obligaría a migrar datos y tokens. El PDF no fija el idioma del código.
 - **Descartado:** usar el nombre en español como código.
 
-## D6. Auditoría como log JSON mientras no exista `audit_logs`
+## D6. Auditoría como log JSON mientras no exista `audit_logs` (superada por D14)
 
 - **Decisión:** `registrar_auditoria()` mantiene su firma y **emite log JSON estructurado**
   (`sismo.audit`) hasta que exista la tabla `audit_logs`.
@@ -109,3 +109,19 @@ solo se registran los puntos grises.
   (`POSTGRES_PASSWORD`).
 - **Motivo:** permitir `docker compose up` sin `.env` para desarrollo local.
 - **Descartado:** exigir `.env` para levantar el entorno local.
+
+## D14. Auditoría persistente sin cambiar la firma
+
+- **Decisión:** `registrar_auditoria()` conserva su firma síncrona y sin sesión. Además del
+  log JSON, programa la escritura en `audit_logs` con una sesión propia, en segundo plano;
+  `esperar_auditoria()` la completa al apagar la API o al final de un script. La tabla es
+  de solo inserción por trigger y `actor_id` no es clave foránea (el registro sobrevive a
+  la cuenta).
+- **Motivo:** las llamadas existentes ocurren después del `commit` o justo antes de
+  rechazar una petición (login fallido, acción denegada), así que no comparten la
+  transacción del cambio; cambiar la firma obligaba a tocar todos los módulos.
+- **Costo:** si el proceso muere entre la respuesta y la escritura, el evento queda solo
+  en el log JSON. El dueño de la tabla puede desactivar el trigger: en producción la API
+  debe conectarse con un rol que no sea dueño de las tablas.
+- **Descartado:** cambiar la firma para recibir la sesión (rompe a todos los llamadores) y
+  un driver síncrono aparte (bloquearía el bucle de eventos en cada evento).

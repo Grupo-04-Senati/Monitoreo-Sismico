@@ -34,7 +34,7 @@ from app.core.security import hash_password
 from app.db.database import AsyncSessionLocal
 from app.db.models import Role, User, UserStatus
 from app.schemas.auth import validar_password
-from app.services.audit import registrar_auditoria
+from app.services.audit import esperar_auditoria, registrar_auditoria
 
 #: Variable de entorno usada en entornos no interactivos.
 ENV_PASSWORD = "SISMO_ADMIN_PASSWORD"
@@ -127,6 +127,7 @@ async def _crear(args: argparse.Namespace) -> int:
             before=antes,
             after={"email": email, "status": user.status, "roles": [r.name for r in user.roles]},
         )
+        await esperar_auditoria()
 
         print("OK: cuenta lista.")
         print(f"  id:     {user.id}")

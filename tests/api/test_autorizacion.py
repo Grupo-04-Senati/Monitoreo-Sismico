@@ -75,7 +75,9 @@ class _UsuarioSimulado:
 
 @pytest.fixture
 def cliente():
-    with TestClient(app) as c:
+    # Sin propagar errores del servidor: la matriz solo mira la autorización, y
+    # un módulo que necesita la base puede responder 500 si no hay PostgreSQL.
+    with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
 
@@ -105,7 +107,7 @@ def test_matriz_roles_modulos_b(cliente, rol, metodo, ruta, exigido):
     _como(rol)
     respuesta = cliente.request(metodo, ruta)
     if _tiene_acceso(rol, exigido):
-        # Pasa la autorización; el módulo aún no existe (200 vacío, 404 o 501).
-        assert respuesta.status_code in {200, 404, 501}, f"{rol}: {metodo} {ruta} → {respuesta.status_code}"
+        # Pasa la autorización; lo que responda el módulo después no se evalúa aquí.
+        assert respuesta.status_code not in {401, 403}, f"{rol}: {metodo} {ruta} → {respuesta.status_code}"
     else:
         assert respuesta.status_code == 403, f"{rol}: {metodo} {ruta} → {respuesta.status_code}"
