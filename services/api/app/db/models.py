@@ -591,3 +591,65 @@ class ModelRegistry(Base):
         CheckConstraint("status IN ('aprobado', 'retirado')", name="ck_model_registry_status"),
     )
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# Estimaciones experimentales (módulo 6.7)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class EstimateStatus(str):
+    EN_REVISION = "en_revision"
+    PUBLICADA = "publicada"
+    RETIRADA = "retirada"
+
+
+class RiskEstimate(Base):
+    """Estimación experimental (PDF §7 `risk_estimates`).
+
+    Siempre identifica el modelo y su versión, lleva intervalo de incertidumbre,
+    fecha de cálculo y advertencia, y **no se mezcla con eventos observados**.
+    Nace "en revisión"; solo un Administrador la publica o la retira. Los valores
+    calculados no se modifican (trigger en la migración `0015_estimaciones`).
+    """
+
+    __tablename__ = "risk_estimates"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    model_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("model_registry.id", ondelete="RESTRICT"), nullable=False
+    )
+    #: Unidad espacial: la cobertura del dataset del modelo (no hay zonas oficiales todavía).
+    area_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    area_description: Mapped[str] = mapped_column(String(255), nullable=False)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    lower_bound: Mapped[float] = mapped_column(Float, nullable=False)
+    upper_bound: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence_level: Mapped[float] = mapped_column(Float, nullable=False)
+    method: Mapped[str] = mapped_column(String(160), nullable=False)
+    #: Valor de la referencia (media histórica) para poner la estimación en contexto.
+    reference_value: Mapped[float | None] = mapped_column(Float)
+    #: Conteos de las semanas previas usados como entrada (trazabilidad).
+    inputs: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    disclaimer: Mapped[str] = mapped_column(String(500), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=EstimateStatus.EN_REVISION)
+    created_by: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("status IN ('en_revision', 'publicada', 'retirada')", name="ck_risk_estimates_status"),
+        CheckConstraint("lower_bound <= value AND value <= upper_bound", name="ck_risk_estimates_intervalo"),
+        CheckConstraint("window_start < window_end", name="ck_risk_estimates_ventana"),
+        Index("ix_risk_estimates_calculated_at", "calculated_at"),
+        Index("ix_risk_estimates_model", "model_id"),
+    )
+

@@ -117,6 +117,16 @@ registrar_auditoria(
   en `model_registry`; se rechaza si el mejor resultado es una referencia.
 - El modelo entrenado se guarda en `services/ml/artifacts/<id>.joblib` (no se versiona).
 
+## 7d. Estimaciones experimentales
+
+- `POST /api/v1/estimates` (permiso `estimaciones`) con `model_id` de un modelo **aprobado**
+  de conteo semanal; la regresión lineal no estima (409). Estima la semana en curso
+  (lunes UTC) con las 12 semanas completas previas contadas con las reglas del dataset.
+- Respuesta: `categoria = "estimacion_experimental"`, valor, intervalo del 90 % (errores
+  reales en prueba), referencia, modelo y versión, entradas, advertencias y `disclaimer`.
+- Nace `en_revision`; `POST /{id}/publish` y `/{id}/withdraw` solo Administrador. Los
+  valores no se modifican ni se borran (trigger). Nunca se envía como alerta.
+
 ## 8. Datos y estados
 
 - Nada de datos de ejemplo ni valores inventados. Si falta un dato: `null` y la UI muestra
