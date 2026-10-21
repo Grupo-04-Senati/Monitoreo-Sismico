@@ -68,6 +68,9 @@ jobs:
         run: |
           export SISMO_ADMIN_PASSWORD="Ci#$(openssl rand -hex 16)"
           python -m app.scripts.crear_admin --email admin-ci@empresa-ejemplo.pe --name "Administrador CI"
+      - name: Muestra real del USGS (sin red)
+        working-directory: services/api
+        run: python -m app.scripts.cargar_muestra ../../tests/fixtures/usgs_peru_2025_m45.json
       - name: Pruebas
         run: python -m pytest tests -q -p no:cacheprovider -rs
 
@@ -174,3 +177,48 @@ jobs:
       - name: Apagar y borrar volúmenes
         if: always()
         run: $COMPOSE down -v
+
+  e2e:
+    name: E2E (Playwright, flujos principales)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sismo
+          POSTGRES_PASSWORD: sismo_ci
+          POSTGRES_DB: sismo_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sismo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: sismo
+      POSTGRES_PASSWORD: sismo_ci
+      POSTGRES_DB: sismo_e2e
+      API_SECRET_KEY: ci-solo-para-pruebas-no-es-un-secreto-real
+      E2E_PYTHON: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: services/api/requirements.txt
+      - run: pip install -r services/api/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Navegador de Playwright
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Pruebas E2E
+        working-directory: apps/web
+        run: npm run e2e
