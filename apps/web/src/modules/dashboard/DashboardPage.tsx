@@ -18,7 +18,7 @@ import { useDashboardData } from "./hooks/useDashboardData";
 import { ROLE_LABELS } from "@/types/auth";
 import {
   filterEvents, periodLabel, toTimeSeries, toMagnitudeBuckets,
-  groupTimeSeries, medianDepth, meanDepth, maxMagnitudeEvent, REGION_OPTIONS,
+  groupTimeSeries, periodBounds, medianDepth, meanDepth, maxMagnitudeEvent, REGION_OPTIONS,
   type TimeGranularity,
 } from "@/lib/catalogo";
 import {
@@ -346,10 +346,18 @@ export default function DashboardPage() {
     [baseFiltered, magmin],
   );
 
-  const timeSeries = useMemo(() => toTimeSeries(filtered), [filtered]);
+  const timeSeries = useMemo(
+    () => toTimeSeries(filtered, periodBounds(periodo, desde, hasta)),
+    [filtered, periodo, desde, hasta],
+  );
   const buckets = useMemo(() => toMagnitudeBuckets(filtered), [filtered]);
 
   const maxEv = useMemo(() => maxMagnitudeEvent(filtered), [filtered]);
+  // Tipos reales del periodo filtrado (no un texto fijo): Mw, mb y ML no son comparables.
+  const tiposMagnitud = useMemo(
+    () => [...new Set(filtered.map((e) => e.magnitudeType ?? "sin tipo"))].sort(),
+    [filtered],
+  );
   const medDepth = useMemo(() => medianDepth(filtered), [filtered]);
   const avgDepth = useMemo(() => meanDepth(filtered), [filtered]);
   const onlineSources = data.fuente?.habilitadas ?? null;
@@ -502,7 +510,10 @@ export default function DashboardPage() {
     [mBase, mf.magmin],
   );
 
-  const mSeries = useMemo(() => groupTimeSeries(mEvents, gran), [mEvents, gran]);
+  const mSeries = useMemo(
+    () => groupTimeSeries(mEvents, gran, periodBounds(mf.periodo, mf.desde, mf.hasta)),
+    [mEvents, gran, mf.periodo, mf.desde, mf.hasta],
+  );
   const mBuckets = useMemo(() => toMagnitudeBuckets(mEvents), [mEvents]);
   const mPLabel = periodLabel(mf.periodo, mf.desde, mf.hasta);
   const mZonaName = mf.zona ? REGION_OPTIONS.find((r) => r.slug === mf.zona)?.name ?? mf.zona : "";
@@ -800,7 +811,7 @@ export default function DashboardPage() {
         <Kpi
           label="Magnitud máxima"
           value={maxEv ? `${maxEv.magnitude.toFixed(1)} ${maxEv.magnitudeType ?? "—"}` : "—"}
-          hint="Tipo: Mw/ML mixto"
+          hint={tiposMagnitud.length ? `Tipos en el periodo: ${tiposMagnitud.join(", ")}` : "Sin eventos en el periodo"}
         />
         <Kpi label="Profundidad mediana" value={medDepth !== null ? `${medDepth} km` : "—"} hint="Del periodo filtrado" />
         <Kpi label="Profundidad media" value={avgDepth !== null ? `${avgDepth} km` : "—"} hint="Del periodo filtrado" />

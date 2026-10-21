@@ -132,15 +132,16 @@ export function countPreviousPeriod(events: SeismicEvent[], f: EventFilter = {},
 
 /* ════ Derivados del catálogo filtrado ════ */
 
-export function toTimeSeries(events: SeismicEvent[]): { label: string; value: number; key: string }[] {
-  const counts = new Map<string, number>();
-  for (const e of events) {
-    const k = dayKeyUTC5(e.occurredAt);
-    counts.set(k, (counts.get(k) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([k, v]) => ({ label: fmtDayLabel(k), value: v, key: k }));
+/**
+ * Eventos por día (UTC-5). Los días sin eventos del rango cuentan como 0: omitirlos
+ * uniría con una línea días separados y parecería actividad constante (PDF §11).
+ * `rango` es el del filtro (`periodBounds`); si no es finito, se usa el de los eventos.
+ */
+export function toTimeSeries(
+  events: SeismicEvent[],
+  rango?: { start: number; end: number },
+): { label: string; value: number; key: string }[] {
+  return groupTimeSeries(events, "day", rango);
 }
 
 export type TimeGranularity = "day" | "week" | "month";
@@ -165,18 +166,49 @@ function groupLabel(key: string, gran: TimeGranularity): string {
   return fmtDayLabel(key);
 }
 
+/** Máximo de periodos que se rellenan con 0 (≈ 27 años por día). */
+const MAX_PERIODOS = 10_000;
+
+/** Clave siguiente a `key` (día, lunes de la semana siguiente o mes siguiente). */
+function siguienteClave(key: string, gran: TimeGranularity): string {
+  if (gran === "month") {
+    const [y, m] = key.split("-").map(Number);
+    return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  }
+  const [y, m, d] = key.split("-").map(Number);
+  const n = new Date(Date.UTC(y, m - 1, d + (gran === "week" ? 7 : 1)));
+  return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, "0")}-${String(n.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Eventos agrupados por día, semana (lunes) o mes, en UTC-5. Los periodos sin
+ * eventos del rango cuentan como 0 (ver `toTimeSeries`).
+ */
 export function groupTimeSeries(
   events: SeismicEvent[],
   granularity: TimeGranularity = "day",
+  rango?: { start: number; end: number },
 ): { label: string; value: number; key: string }[] {
   const groups = new Map<string, number>();
   for (const e of events) {
     const k = groupKeyUTC5(e.occurredAt, granularity);
     groups.set(k, (groups.get(k) ?? 0) + 1);
   }
-  return [...groups.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([k, v]) => ({ label: groupLabel(k, granularity), value: v, key: k }));
+  const claves = [...groups.keys()].sort();
+  const desde = rango && Number.isFinite(rango.start) ? groupKeyUTC5(new Date(rango.start).toISOString(), granularity) : claves[0];
+  // `end` es exclusivo en los periodos por día: se toma el instante anterior.
+  const hasta = rango && Number.isFinite(rango.end) ? groupKeyUTC5(new Date(rango.end - 1).toISOString(), granularity) : claves[claves.length - 1];
+  if (!desde || !hasta) return [];
+
+  const serie: { label: string; value: number; key: string }[] = [];
+  for (let k = desde; k <= hasta; k = siguienteClave(k, granularity)) {
+    if (serie.length >= MAX_PERIODOS) {
+      // Periodo enorme para esta agrupación: solo los periodos con eventos (sin recortar en silencio).
+      return claves.map((c) => ({ label: groupLabel(c, granularity), value: groups.get(c) ?? 0, key: c }));
+    }
+    serie.push({ label: groupLabel(k, granularity), value: groups.get(k) ?? 0, key: k });
+  }
+  return serie;
 }
 
 const MAG_RANGES = ["2.0–2.9", "3.0–3.9", "4.0–4.9", "5.0–5.9", "6.0+"];

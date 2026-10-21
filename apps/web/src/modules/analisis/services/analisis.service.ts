@@ -103,9 +103,34 @@ function etiquetaSerie(key: string, ag: FiltrosAnalisis["agrupacion"]): string {
   return diaCorto(key);
 }
 
+/** Máximo de periodos que se rellenan con 0; por encima solo se muestran los que tienen eventos. */
+const MAX_PERIODOS_SERIE = 10_000;
+
+/** Clave del periodo siguiente (hora, día, lunes siguiente o mes siguiente). */
+function siguienteClave(key: string, ag: FiltrosAnalisis["agrupacion"]): string {
+  const dos = (n: number) => String(n).padStart(2, "0");
+  if (ag === "mes") {
+    const [y, m] = key.split("-").map(Number);
+    return m === 12 ? `${y + 1}-01` : `${y}-${dos(m + 1)}`;
+  }
+  const [dia, hora] = key.split("T");
+  const [y, m, d] = dia.split("-").map(Number);
+  const n =
+    ag === "hora"
+      ? new Date(Date.UTC(y, m - 1, d, Number(hora) + 1))
+      : new Date(Date.UTC(y, m - 1, d + (ag === "semana" ? 7 : 1)));
+  const base = `${n.getUTCFullYear()}-${dos(n.getUTCMonth() + 1)}-${dos(n.getUTCDate())}`;
+  return ag === "hora" ? `${base}T${dos(n.getUTCHours())}` : base;
+}
+
+/**
+ * Serie temporal. Los periodos sin eventos del rango cuentan como 0: omitirlos
+ * uniría periodos separados y la media móvil promediaría días no consecutivos.
+ */
 function calcularSerie(
   eventos: SeismicEvent[],
   ag: FiltrosAnalisis["agrupacion"],
+  rango: { start: number; end: number },
 ): ResultadoAnalisis["serie"] {
   const mapa = new Map<string, SeismicEvent[]>();
   for (const e of eventos) {
@@ -114,7 +139,22 @@ function calcularSerie(
     if (arr) arr.push(e);
     else mapa.set(k, [e]);
   }
-  const claves = [...mapa.keys()].sort((a, b) => a.localeCompare(b));
+  const conEventos = [...mapa.keys()].sort((a, b) => a.localeCompare(b));
+  // El rango es el del filtro; si no tiene límites, el de los propios eventos.
+  const desde = Number.isFinite(rango.start) ? claveSerie(new Date(rango.start).toISOString(), ag) : conEventos[0];
+  const hasta = Number.isFinite(rango.end) ? claveSerie(new Date(rango.end - 1).toISOString(), ag) : conEventos[conEventos.length - 1];
+  let claves: string[] = [];
+  let recortada = false;
+  if (desde && hasta) {
+    for (let k = desde; k <= hasta; k = siguienteClave(k, ag)) {
+      if (claves.length >= MAX_PERIODOS_SERIE) {
+        recortada = true;
+        break;
+      }
+      claves.push(k);
+    }
+  }
+  if (recortada) claves = conEventos; // periodo enorme para esta agrupación: no se rellena
   const puntos: PuntoGrafico[] = claves.map((k) => {
     const evs = mapa.get(k) ?? [];
     return { label: etiquetaSerie(k, ag), value: evs.length, eventos: evs };
@@ -122,7 +162,9 @@ function calcularSerie(
 
   let mediaMovil: (number | null)[] = [];
   let nota = "";
-  if (ag === "dia" && puntos.length >= 7) {
+  if (recortada) {
+    nota = "Periodo demasiado largo para esta agrupación: solo se muestran los periodos con eventos. Use una agrupación mayor.";
+  } else if (ag === "dia" && puntos.length >= 7) {
     mediaMovil = puntos.map((_, i) => {
       const desde = Math.max(0, i - 6);
       const ventana = puntos.slice(desde, i + 1);
@@ -375,7 +417,7 @@ export function calcular(f: FiltrosAnalisis, catalogo: SeismicEvent[]): Resultad
     filtros: f,
     n: eventos.length,
     faltantes,
-    serie: calcularSerie(eventos, f.agrupacion),
+    serie: calcularSerie(eventos, f.agrupacion, { start, end }),
     magnitudes: { puntos: histogramaMagnitud(eventos, f.resolucion) },
     profundidades,
     regiones: { puntos: conteoPorRegion(eventos, f.top) },
