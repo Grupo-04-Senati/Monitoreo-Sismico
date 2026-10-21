@@ -36,7 +36,10 @@ columna dice qué). Estado al 2026-10-21, versión candidata de la Fase 9.
 
 - [x] Prueba de interfaz automatizada (E2E): 13 flujos en `apps/web/e2e` (acceso, roles,
       eventos, reglas y avisos, configuración), en el CI en cada cambio.
-- [ ] Prueba de carga (p. ej. 50 usuarios concurrentes sobre Eventos y Dashboard).
+- [x] Prueba de carga (`docs/CARGA.md`): un proceso atiende 100 usuarios simultáneos con uso
+      realista (p95 676 ms, 0 errores).
+- [ ] Repetir la prueba de carga en el servidor Linux de producción y medir el escalado con
+      varios procesos (antes, mover el límite de intentos de acceso a Redis).
 - [x] Accesibilidad automática (PDF §13): axe-core con reglas WCAG 2.1 A/AA en 15 pantallas
       sin hallazgos, uso con teclado y cierre de diálogos con Esc (`e2e/06-accesibilidad.spec.ts`).
 - [ ] Revisión manual con un lector de pantalla (NVDA o Narrador) de los flujos principales.
