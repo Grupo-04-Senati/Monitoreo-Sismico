@@ -1,4 +1,4 @@
-import { DATA_RANGE_LABEL, LAST_SYNC_AT } from "@/lib/ancla";
+import { DATA_RANGE_LABEL, FUENTE, LAST_SYNC_AT } from "@/lib/ancla";
 import { periodBounds } from "@/lib/catalogo";
 import { fmtDateTimeUTC5 } from "@/lib/format";
 import { ApiError, apiGet } from "@/lib/api";
@@ -194,24 +194,20 @@ export async function resumirEventos(filtros: FiltrosEventos): Promise<ResumenEv
 export interface Procedencia {
   fuente: string;
   ultimaSincronizacion: string;
-  /** `null` mientras no se defina la licencia. */
+  /** Licencia registrada en la fuente (`GET /meta`); `null` si no está cargada. */
   licencia: string | null;
-  /** `null` mientras no se publiquen los términos de uso. */
-  terminos: string | null;
   rangoCatalogo: string;
 }
 
 /**
- * Metadatos de la fuente para la franja de procedencia. Licencia y términos
- * están pendientes de definir (por eso se muestran como "pendiente"). La fecha
- * de sincronización y el rango del catálogo provienen de `GET /meta`.
+ * Metadatos de la fuente para la franja de procedencia, todos de `GET /meta`:
+ * licencia de la fuente, última sincronización y rango del catálogo.
  */
 export function obtenerProcedencia(): Procedencia {
   return {
     fuente: SOURCE_NAME,
     ultimaSincronizacion: LAST_SYNC_AT ?? "",
-    licencia: null,
-    terminos: null,
+    licencia: FUENTE?.licencia ?? null,
     rangoCatalogo: DATA_RANGE_LABEL,
   };
 }

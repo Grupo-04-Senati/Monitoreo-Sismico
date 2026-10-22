@@ -20,13 +20,13 @@ export function cuantil(a: number[], p: number): number {
   return s[l] + (s[Math.min(l + 1, s.length - 1)] - s[l]) * (i - l);
 }
 
-/** Mediana: valor central; con n par, el promedio de los dos centrales redondeado.
-    Misma definición que Eventos/Dashboard para que la "profundidad mediana" coincida. */
+/** Mediana: valor central; con n par, el promedio exacto de los dos centrales
+    (sin redondear: con magnitudes, redondear a entero daba valores imposibles). */
 export function mediana(a: number[]): number {
   if (!a.length) return NaN;
   const s = [...a].sort((x, y) => x - y);
   const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
 /** Desviación estándar muestral (n − 1). */

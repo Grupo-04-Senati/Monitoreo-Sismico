@@ -27,11 +27,13 @@ export interface CalidadDatos {
   campos: CalidadCampo[];
 }
 
-export function useCalidadDatos(): CalidadDatos | null {
+/** `habilitado` = el rol puede ver Fuentes de datos; si no, no se consulta (respondería 403). */
+export function useCalidadDatos(habilitado = true): CalidadDatos | null {
   const [datos, setDatos] = useState<CalidadDatos | null>(null);
 
   useEffect(() => {
     let vivo = true;
+    if (!habilitado) return;
     (async () => {
       const { items } = await apiGet<{ items: { id: string }[] }>("/sources");
       const id = items[0]?.id;
@@ -65,7 +67,7 @@ export function useCalidadDatos(): CalidadDatos | null {
     return () => {
       vivo = false;
     };
-  }, []);
+  }, [habilitado]);
 
   return datos;
 }

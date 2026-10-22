@@ -9,7 +9,7 @@ interface Estado {
 }
 
 /** Carga la página de ejecuciones para los filtros y la paginación actuales. */
-export function useEjecuciones(filtros: FiltrosEjecuciones, pagina: number, tamano: number) {
+export function useEjecuciones(filtros: FiltrosEjecuciones, pagina: number, tamano: number, recarga = 0) {
   const [estado, setEstado] = useState<Estado>({ cargando: true, error: null, datos: null });
   const [intento, setIntento] = useState(0);
 
@@ -32,7 +32,7 @@ export function useEjecuciones(filtros: FiltrosEjecuciones, pagina: number, tama
     return () => {
       vigente = false;
     };
-  }, [filtros, pagina, tamano, intento]);
+  }, [filtros, pagina, tamano, intento, recarga]);
 
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
   return { ...estado, reintentar };

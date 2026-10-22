@@ -230,7 +230,8 @@ export function medianDepth(events: SeismicEvent[]): number | null {
     .sort((a, b) => a - b);
   if (!ds.length) return null;
   const mid = Math.floor(ds.length / 2);
-  return ds.length % 2 ? ds[mid] : Math.round((ds[mid - 1] + ds[mid]) / 2);
+  const m = ds.length % 2 ? ds[mid] : (ds[mid - 1] + ds[mid]) / 2;
+  return Math.round(m * 10) / 10; // un decimal, como la profundidad media
 }
 
 export function meanDepth(events: SeismicEvent[]): number | null {

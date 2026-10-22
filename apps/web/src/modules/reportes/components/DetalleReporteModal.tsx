@@ -107,8 +107,7 @@ export default function DetalleReporteModal({ reporte, zonas, onDescargar, onCer
           <section className="flex min-h-0 flex-1 flex-col">
             <h3 className="mb-1.5 text-sm font-semibold text-content">Vista previa del contenido</h3>
             <p className="rounded-lg border border-border bg-surface px-3 py-6 text-center text-xs text-content-muted">
-              Pendiente de backend: la previsualización de filas aún no está disponible.
-              Descarga el informe para ver su contenido.
+              La vista previa de filas no está disponible: descarga el informe para ver su contenido.
             </p>
             <p className="mt-1.5 text-[10px] text-content-muted">
               Metadatos del informe: {metadatosReporte(reporte).map(([k, v]) => `${k}: ${v}`).join(" · ")}

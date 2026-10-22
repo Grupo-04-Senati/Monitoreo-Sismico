@@ -150,6 +150,43 @@ async def meta(db: AsyncSession = Depends(get_db)):
         "data_min_day": mn.astimezone(u5).date().isoformat() if mn else None,
         "data_max_day": mx.astimezone(u5).date().isoformat() if mx else None,
         "last_sync_at": last.isoformat().replace("+00:00", "Z") if last else None,
+        **await _resumen_fuente(db),
+    }
+
+
+async def _resumen_fuente(db: AsyncSession) -> dict:
+    """Estado público de la fuente para la barra superior, el Dashboard y la procedencia.
+
+    Lo ven todos los roles (no es dato sensible): nombre, licencia, estado del conector
+    y último éxito. El detalle (ejecuciones, configuración) sigue en /sources. El
+    simulador de la demo (D29) no cuenta como fuente.
+    """
+    from app.db.models import DataSource
+    from app.services.simulacion import CLAVE_FUENTE as CLAVE_SIMULADOR
+    from app.services.sources import calcular_resumen, listar_runs
+
+    fuentes = list(
+        (
+            await db.execute(
+                select(DataSource).where(DataSource.key != CLAVE_SIMULADOR).order_by(DataSource.created_at)
+            )
+        ).scalars()
+    )
+    principal = next((f for f in fuentes if f.enabled), fuentes[0] if fuentes else None)
+    resumen = None
+    if principal is not None:
+        estado = calcular_resumen(await listar_runs(db, principal.id, limite=20))
+        resumen = {
+            "nombre": principal.name,
+            "organizacion": principal.organization,
+            "licencia": principal.license,
+            "estado_conector": estado.estado_conector,
+            "estado_detalle": estado.estado_conector_detalle,
+            "ultimo_exito": estado.ultimo_exito.isoformat().replace("+00:00", "Z") if estado.ultimo_exito else None,
+        }
+    return {
+        "fuente": resumen,
+        "fuentes": {"total": len(fuentes), "habilitadas": sum(1 for f in fuentes if f.enabled)},
     }
 
 

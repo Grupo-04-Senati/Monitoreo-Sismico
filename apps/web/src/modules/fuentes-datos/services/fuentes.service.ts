@@ -1,5 +1,6 @@
 import { dayKeyUTC5, fmtDateTimeUTC5, fmtTimeUTC5 } from "@/lib/format";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
+import type { MetaInfo } from "@/lib/ancla";
 import { downloadFile } from "@/lib/export";
 import { buildXlsx } from "@/lib/xlsx";
 import { SOURCE_NAME } from "@/config/fuente";
@@ -279,16 +280,17 @@ export interface BarraFuente {
   ultimoExitoUtc: string;
 }
 
-/** Estado resumido de la fuente única, para la barra superior. */
-export async function cargarBarraFuente(): Promise<BarraFuente> {
-  const id = await sourceId();
-  const detail = await apiGet<DetailAPI>(`/sources/${id}`);
-  const resumen = adaptarResumen(detail.summary);
+/** Estado resumido de la fuente única, para la barra superior. Sale de `GET /meta`,
+    que ven todos los roles (el detalle de /sources es solo para quien gestiona fuentes). */
+export async function cargarBarraFuente(): Promise<BarraFuente | null> {
+  const meta = await apiGet<MetaInfo>("/meta");
+  const f = meta.fuente;
+  if (!f || f.estado_conector === "sin_datos") return null;
   return {
-    organizacion: detail.source.organization,
-    nombre: detail.source.name,
-    estadoConector: resumen.estadoConector,
-    ultimoExitoUtc: resumen.ultimoExitoUtc,
+    organizacion: f.organizacion,
+    nombre: f.nombre,
+    estadoConector: f.estado_conector,
+    ultimoExitoUtc: f.ultimo_exito ?? "",
   };
 }
 

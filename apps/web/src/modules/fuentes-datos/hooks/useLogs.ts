@@ -9,7 +9,7 @@ interface Estado {
 }
 
 /** Carga la página del registro de la ingesta para el nivel y la paginación actuales. */
-export function useLogs(filtros: FiltrosLogs, pagina: number, tamano: number) {
+export function useLogs(filtros: FiltrosLogs, pagina: number, tamano: number, recarga = 0) {
   const [estado, setEstado] = useState<Estado>({ cargando: true, error: null, datos: null });
   const [intento, setIntento] = useState(0);
 
@@ -32,7 +32,7 @@ export function useLogs(filtros: FiltrosLogs, pagina: number, tamano: number) {
     return () => {
       vigente = false;
     };
-  }, [filtros, pagina, tamano, intento]);
+  }, [filtros, pagina, tamano, intento, recarga]);
 
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
   return { ...estado, reintentar };

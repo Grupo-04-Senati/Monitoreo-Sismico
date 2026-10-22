@@ -57,10 +57,12 @@ export default function FuentesDatosPage() {
     limpiar,
   } = useFuentesURL();
 
-  const { cargando: cargandoMeta, error: errorMeta, meta, reintentar } = useFuentesMeta();
-  const { datos: datosEjec, cargando: cargandoEjec } = useEjecuciones(ejec, pagina, tamano);
-  const ventana = useEjecucionesVentana(ejec);
-  const { datos: datosLogs, cargando: cargandoLogs } = useLogs(logs, pagina, tamano);
+  // Sube al cerrar la sincronización manual: recarga indicadores, ejecuciones y registros.
+  const [recarga, setRecarga] = useState(0);
+  const { cargando: cargandoMeta, error: errorMeta, meta, reintentar } = useFuentesMeta(recarga);
+  const { datos: datosEjec, cargando: cargandoEjec } = useEjecuciones(ejec, pagina, tamano, recarga);
+  const ventana = useEjecucionesVentana(ejec, recarga);
+  const { datos: datosLogs, cargando: cargandoLogs } = useLogs(logs, pagina, tamano, recarga);
 
   const [seleccionId, setSeleccionId] = useState<string | null>(null);
   const [seccion, setSeccion] = useState<SeccionFuente | null>(null);
@@ -81,7 +83,7 @@ export default function FuentesDatosPage() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [recarga]);
 
   const actTime = fmtTimeUTC5(metaIso);
 
@@ -309,7 +311,15 @@ export default function FuentesDatosPage() {
       )}
 
       {/* Sincronización manual */}
-      {sincronizar && <ModalSincronizar onCerrar={() => setSincronizar(false)} onSincronizar={sincronizarAhora} />}
+      {sincronizar && (
+        <ModalSincronizar
+          onCerrar={() => {
+            setSincronizar(false);
+            setRecarga((r) => r + 1);
+          }}
+          onSincronizar={sincronizarAhora}
+        />
+      )}
     </div>
   );
 }

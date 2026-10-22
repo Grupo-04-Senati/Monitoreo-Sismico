@@ -15,8 +15,9 @@ export default function AvisoReportes() {
         Cada informe guarda su <b className="font-semibold text-content">fecha de corte</b> y sus filtros, por lo que es{" "}
         <b className="font-semibold text-content">reproducible</b>. El enlace de descarga{" "}
         <b className="font-semibold text-content">expira</b> y solo puede abrirlo quien lo solicitó o un Administrador.
-        Ningún informe incluye credenciales ni secretos. Los informes de <b className="font-semibold text-content">Modelos ML</b>{" "}
-        y <b className="font-semibold text-content">Alertas</b> aparecerán cuando esos módulos estén disponibles.
+        Ningún informe incluye credenciales ni secretos. Hay informes de eventos, calidad de datos y fuentes; los de{" "}
+        <b className="font-semibold text-content">Modelos ML</b> y <b className="font-semibold text-content">Alertas</b>{" "}
+        son una mejora pendiente (sus datos se consultan y exportan en cada módulo).
       </span>
     </div>
   );

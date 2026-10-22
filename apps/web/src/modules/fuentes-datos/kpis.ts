@@ -31,7 +31,7 @@ export const KPIS: KpiDef[] = [
   {
     etiqueta: "Estado del conector",
     descripcion: "Salud operativa del conector con el proveedor.",
-    calculo: "Se deriva de las últimas 8 ejecuciones finalizadas: sin conexión si la última falló; degradado si hubo algún fallo o error reciente; operativo si no hubo incidencias.",
+    calculo: "Se deriva de las últimas 8 ejecuciones finalizadas: sin conexión si la última falló; degradado si alguna falló o si la última descartó registros inválidos; operativo si no hubo incidencias.",
     detalle: "Salud del conector",
     valor: (r) => ETIQUETA_CONECTOR[r.estadoConector],
     metrica: "fallidas",

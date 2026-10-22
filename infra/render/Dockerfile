@@ -8,6 +8,8 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 RUN npm ci
 COPY apps/web/ apps/web/
+# Datos públicos de la fuente que muestra la interfaz (Docker no copia los .env).
+ENV VITE_FUENTE_NOMBRE="USGS"     VITE_FUENTE_ORG="U.S. Geological Survey (Earthquake Hazards Program)"     VITE_FUENTE_URL="https://earthquake.usgs.gov/earthquakes/search/"
 RUN npm run build:web
 
 FROM python:3.13-slim

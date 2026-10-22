@@ -1,4 +1,5 @@
 import { apiGet } from "@/lib/api";
+import type { MetaInfo } from "@/lib/ancla";
 import type { SeismicEvent } from "@/types";
 import { cargarCatalogo } from "@/modules/eventos/services/eventos.service";
 import { desdeCatalogo } from "@/modules/analisis/services/analisis.service";
@@ -7,7 +8,7 @@ import { desdeCatalogo } from "@/modules/analisis/services/analisis.service";
    Capa de acceso a datos del Dashboard. Todo contra la API real:
      GET /api/v1/dashboard/summary   (agregados SQL)
      GET /api/v1/events              (catálogo para KPIs y gráficos)
-     GET /api/v1/sources             (fuentes configuradas)
+     GET /api/v1/meta                (resumen público de la fuente)
      GET /api/v1/users               (nº de usuarios)
      GET /api/v1/reports             (nº de informes)
    ════════════════════════════════════════════════════════════════ */
@@ -39,12 +40,13 @@ export async function cargarEventos(): Promise<SeismicEvent[]> {
   return (await cargarCatalogo()).map(desdeCatalogo);
 }
 
+/** Fuentes reales (sin el simulador de la demo), desde `GET /meta`: lo ven todos los roles. */
 export async function cargarFuentes(): Promise<FuenteResumen> {
-  const { items } = await apiGet<{ items: { name: string; enabled: boolean }[] }>("/sources");
+  const meta = await apiGet<MetaInfo>("/meta");
   return {
-    total: items.length,
-    habilitadas: items.filter((s) => s.enabled).length,
-    nombre: items[0]?.name ?? null,
+    total: meta.fuentes?.total ?? 0,
+    habilitadas: meta.fuentes?.habilitadas ?? 0,
+    nombre: meta.fuente?.nombre ?? null,
   };
 }
 

@@ -50,10 +50,9 @@ export function resumirFilas(filas: EventoSismico[]): ResumenEventos {
   if (profundidades.length > 0) {
     profundidades.sort((a, b) => a - b);
     const mid = Math.floor(profundidades.length / 2);
-    const mediana =
-      profundidades.length % 2 === 1
-        ? profundidades[mid]
-        : Math.round((profundidades[mid - 1] + profundidades[mid]) / 2);
+    const centro =
+      profundidades.length % 2 === 1 ? profundidades[mid] : (profundidades[mid - 1] + profundidades[mid]) / 2;
+    const mediana = Math.round(centro * 10) / 10; // un decimal, igual que el Dashboard
     profundidad = { min: profundidades[0], mediana, max: profundidades[profundidades.length - 1] };
   }
 
