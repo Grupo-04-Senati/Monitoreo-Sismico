@@ -173,7 +173,7 @@ if settings.WEB_DIST_DIR:
             "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
         )
 
-        @app.get("/{ruta:path}", include_in_schema=False)
+        @app.api_route("/{ruta:path}", methods=["GET", "HEAD"], include_in_schema=False)
         async def web_compilada(ruta: str):
             if ruta.startswith("api/"):
                 raise _HTTPException(status_code=404, detail="Not Found")

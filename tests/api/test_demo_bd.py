@@ -121,6 +121,8 @@ def test_la_api_sirve_la_web_sin_tapar_sus_rutas(tmp_path):
         "assert 'id=\"root\"' in c.get('/').text\n"
         "assert 'id=\"root\"' in c.get('/eventos?periodo=24h').text\n"
         "assert 'Content-Security-Policy' in c.get('/configuracion').headers\n"
+        "h = c.head('/configuracion')  # curl -I, monitores externos\n"
+        "assert h.status_code == 200 and 'Content-Security-Policy' in h.headers\n"
         "assert c.get('/assets/app.js').text == 'console.log(1)'\n"
         "assert c.get('/health').json()['status'] == 'ok'\n"
         "r = c.get('/api/v1/no-existe')\n"
