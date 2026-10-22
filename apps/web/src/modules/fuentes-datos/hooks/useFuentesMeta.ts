@@ -8,7 +8,8 @@ interface EstadoMeta {
 }
 
 /** Carga la ficha, el resumen, la calidad y la configuración del conector. */
-export function useFuentesMeta() {
+/** `recarga`: al cambiar, vuelve a pedir los datos (p. ej. tras una sincronización manual). */
+export function useFuentesMeta(recarga = 0) {
   const [estado, setEstado] = useState<EstadoMeta>({ cargando: true, error: null, meta: null });
   const [intento, setIntento] = useState(0);
 
@@ -31,7 +32,7 @@ export function useFuentesMeta() {
     return () => {
       vigente = false;
     };
-  }, [intento]);
+  }, [intento, recarga]);
 
   const reintentar = useCallback(() => setIntento((n) => n + 1), []);
   return { ...estado, reintentar };

@@ -1,13 +1,12 @@
 import type { Procedencia } from "../services/eventos.service";
 import { fmtDateTimeUTC5 } from "@/lib/format";
 
-/** Franja de procedencia: fuente, sincronización, licencia/términos y rango del catálogo. */
+/** Franja de procedencia: fuente, sincronización, licencia y rango del catálogo. */
 export default function FranjaProcedencia({ procedencia }: { procedencia: Procedencia }) {
   const items: { etiqueta: string; valor: string; pendiente?: boolean }[] = [
     { etiqueta: "Fuente", valor: procedencia.fuente },
     { etiqueta: "Última sincronización", valor: `${fmtDateTimeUTC5(procedencia.ultimaSincronizacion)} (UTC-5)` },
     { etiqueta: "Licencia", valor: procedencia.licencia ?? "pendiente", pendiente: !procedencia.licencia },
-    { etiqueta: "Términos de uso", valor: procedencia.terminos ?? "pendientes", pendiente: !procedencia.terminos },
     { etiqueta: "Catálogo", valor: procedencia.rangoCatalogo },
   ];
 

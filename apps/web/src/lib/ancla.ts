@@ -20,10 +20,26 @@ export let DATA_RANGE_LABEL = "";
 /** Última sincronización de la fuente, si la API la reporta. */
 export let LAST_SYNC_AT: string | null = null;
 
+/** Resumen público de la fuente (`GET /meta`), visible para todos los roles. */
+export interface FuenteMeta {
+  nombre: string;
+  organizacion: string;
+  licencia: string | null;
+  estado_conector: "operativo" | "degradado" | "sin_conexion" | "sin_datos";
+  estado_detalle: string;
+  ultimo_exito: string | null;
+}
+
+/** Fuente principal y recuento de fuentes reales (sin el simulador de la demo). */
+export let FUENTE: FuenteMeta | null = null;
+export let FUENTES: { total: number; habilitadas: number } | null = null;
+
 export interface MetaInfo {
   data_min_day: string | null;
   data_max_day: string | null;
   last_sync_at: string | null;
+  fuente?: FuenteMeta | null;
+  fuentes?: { total: number; habilitadas: number } | null;
 }
 
 function rangoLabel(min: string, max: string): string {
@@ -48,4 +64,6 @@ export function aplicarMeta(meta: MetaInfo): void {
   DATA_MAX_DAY = meta.data_max_day ?? "";
   DATA_RANGE_LABEL = rangoLabel(DATA_MIN_DAY, DATA_MAX_DAY);
   LAST_SYNC_AT = meta.last_sync_at ?? null;
+  FUENTE = meta.fuente ?? null;
+  FUENTES = meta.fuentes ?? null;
 }

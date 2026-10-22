@@ -1,6 +1,6 @@
 import { IconInfo } from "@/components/ui/Icons";
 
-/** Aviso fijo del módulo: cómo está conectada la fuente y qué falta por definir. */
+/** Aviso fijo del módulo: cómo está conectada la fuente. */
 export default function AvisoFuente() {
   return (
     <div
@@ -9,9 +9,9 @@ export default function AvisoFuente() {
     >
       <IconInfo size={16} className="mt-0.5 shrink-0 text-accent-600" />
       <p className="text-xs leading-relaxed text-content-secondary">
-        <b className="font-semibold text-content">Fuente única en el MVP.</b> La URL, licencia,
-        límites de uso y contacto de la fuente están pendientes de definir. Las credenciales solo se referencian (nunca en texto plano)
-        y la ingesta es idempotente: reprocesar no duplica eventos.
+        <b className="font-semibold text-content">Fuente única.</b> La ficha muestra la URL, la licencia y los
+        límites de uso del proveedor. Las credenciales solo se referencian (nunca en texto plano) y la ingesta es
+        idempotente: reprocesar no duplica eventos; las correcciones de la fuente se aplican con historial.
       </p>
     </div>
   );

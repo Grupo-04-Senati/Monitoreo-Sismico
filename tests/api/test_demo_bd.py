@@ -97,6 +97,9 @@ def test_sismo_simulado_recorre_ingesta_y_avisos(admin, monkeypatch):
         c.post(f"/api/v1/alert-rules/{r['id']}/activate")
         res = c.post("/api/v1/demo/simulate", json={"zona": "mina_arequipa", "magnitud": 5.4, "cantidad": 3}).json()
         eventos = c.get("/api/v1/events", params={"q": "SIMULADO", "page_size": 10}).json()
+        meta = c.get("/api/v1/meta").json()
+    # El resumen público de la fuente nunca toma al simulador como fuente.
+    assert meta["fuente"] is None or "ficticios" not in meta["fuente"]["nombre"]
     assert len(res["sismos"]) == 3 and res["sismos"][0]["magnitud"] == 5.4
     assert all(s["region"] == "Arequipa" for s in res["sismos"])
     assert len(res["avisos"]) == 3 and all(a["estado"] == "pendiente_aprobacion" for a in res["avisos"])

@@ -74,7 +74,7 @@ interface ModalFilters {
 }
 
 /* ── Tarjetas de módulos (mismo orden/permisos que el sidebar) ── */
-type ModuleStatus = "Con datos" | "Vacío" | "Capa pendiente";
+type ModuleStatus = "Con datos" | "Disponible";
 
 interface TileCtx {
   events: SeismicEvent[];
@@ -106,9 +106,9 @@ const TILE_GROUPS: TileGroup[] = [
         stat: (ctx) => `${ctx.events.length} eventos`,
       },
       {
-        to: "/mapa-sismico", label: "Mapa sísmico", permission: "mapa", status: "Capa pendiente",
-        desc: "Distribución geográfica; carga un GeoJSON para ver regiones y eventos.", icon: IconMap,
-        stat: (ctx) => `${new Set(ctx.events.map((e) => e.region)).size} regiones con eventos`,
+        to: "/mapa-sismico", label: "Mapa sísmico", permission: "mapa", status: "Con datos",
+        desc: "Eventos sobre los límites departamentales oficiales (INEI).", icon: IconMap,
+        stat: (ctx) => `${new Set(ctx.events.map((e) => e.region).filter(Boolean)).size} regiones con eventos`,
       },
     ],
   },
@@ -121,19 +121,19 @@ const TILE_GROUPS: TileGroup[] = [
         stat: (ctx) => (ctx.events.length ? `Mag. máx. ${Math.max(...ctx.events.map((e) => e.magnitude)).toFixed(1)}` : "Mag. máx. —"),
       },
       {
-        to: "/preparacion-datos", label: "Preparación de datos", permission: "preparacion", status: "Con datos",
+        to: "/preparacion-datos", label: "Preparación de datos", permission: "preparacion", status: "Disponible",
         desc: "Limpieza, deduplicación y control de calidad.", icon: IconDatabase,
-        stat: () => "Pendiente de backend",
+        stat: () => "Datasets versionados",
       },
       {
-        to: "/modelos-ml", label: "Modelos ML", permission: "modelos", status: "Vacío",
+        to: "/modelos-ml", label: "Modelos ML", permission: "modelos", status: "Disponible",
         desc: "Entrenamiento y evaluación de experimentos.", icon: IconML,
-        stat: () => "Pendiente de backend",
+        stat: () => "Comparados con referencias",
       },
       {
-        to: "/estimaciones", label: "Estimaciones", permission: "estimaciones", status: "Vacío",
+        to: "/estimaciones", label: "Estimaciones", permission: "estimaciones", status: "Disponible",
         desc: "Resultados experimentales con incertidumbre.", icon: IconEstimate,
-        stat: () => "Pendiente de backend",
+        stat: () => "Con intervalo del 90 %",
       },
     ],
   },
@@ -141,14 +141,14 @@ const TILE_GROUPS: TileGroup[] = [
     title: "Alertas",
     items: [
       {
-        to: "/reglas-alertas", label: "Reglas de alertas", permission: "reglas", status: "Con datos",
+        to: "/reglas-alertas", label: "Reglas de alertas", permission: "reglas", status: "Disponible",
         desc: "Condiciones, zonas y canales de notificación.", icon: IconAlertRule,
-        stat: () => "Pendiente de backend",
+        stat: () => "Simulables antes de activar",
       },
       {
-        to: "/alertas", label: "Centro de alertas", permission: "alertas", status: "Con datos",
+        to: "/alertas", label: "Centro de alertas", permission: "alertas", status: "Disponible",
         desc: "Seguimiento de envío, reintentos y entregas.", icon: IconAlertCenter,
-        stat: () => "Pendiente de backend",
+        stat: () => "Aprobación, entrega y acuse",
       },
     ],
   },
@@ -367,7 +367,7 @@ export default function DashboardPage() {
   const pLabel = periodLabel(periodo, desde, hasta);
   const zonaName = zona ? REGION_OPTIONS.find((r) => r.slug === zona)?.name ?? zona : "";
   const actTime = fmtTimeUTC5(NOW.toISOString());
-  const regionsWithEvents = new Set(filtered.map((e) => e.region)).size;
+  const regionsWithEvents = new Set(filtered.map((e) => e.region).filter(Boolean)).size; // fuera del Perú no hay departamento
   const hasActiveFilters = periodo !== DEFAULT_PERIOD || Boolean(zona) || magmin > 0;
 
   const filterSummary = `Filtros: ${zonaName || "Todo el Perú"}, mag ≥ ${magmin || "todas"}`;
@@ -404,7 +404,8 @@ export default function DashboardPage() {
   /* ── Estado de los modales ─────────────────────────── */
   const [expanded, setExpanded] = useState<ModalKind | null>(null);
   const [calidadOpen, setCalidadOpen] = useState(false);
-  const calidad = useCalidadDatos();
+  const verCalidad = canAccess("fuentes");
+  const calidad = useCalidadDatos(verCalidad);
   const [mf, setMf] = useState<ModalFilters>({
     periodo: DEFAULT_PERIOD, desde: "", hasta: "", zona: "", magmin: 0,
   });
@@ -837,9 +838,11 @@ export default function DashboardPage() {
           hint={
             calidad
               ? `${calidad.global.pctNulos.toFixed(1)}% nulos · ${calidad.global.pctDuplicados == null ? "—" : `${calidad.global.pctDuplicados.toFixed(1)}%`} duplicados`
-              : "Calculando…"
+              : verCalidad
+                ? "Calculando…"
+                : "Detalle en Fuentes de datos (Analista o Administrador)"
           }
-          onClick={() => setCalidadOpen(true)}
+          onClick={verCalidad ? () => setCalidadOpen(true) : undefined}
         />
       </div>
 

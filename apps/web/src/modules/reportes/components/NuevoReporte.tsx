@@ -190,7 +190,7 @@ export default function NuevoReporte({ puedeGenerar, puedePdf, zonas, creando, o
       <div className="mt-4 rounded-lg border border-border bg-surface-secondary p-3">
         <p className="flex items-center gap-2 text-xs text-content-secondary">
           <IconInfo size={13} className="text-content-muted" />
-          Pendiente de backend: la vista previa y el recuento de filas aún no están disponibles.
+          El número de filas se conoce al generar el informe (columna «Filas» de la lista).
         </p>
       </div>
 

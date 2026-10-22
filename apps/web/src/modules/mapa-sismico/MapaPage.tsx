@@ -144,7 +144,7 @@ export default function MapaPage() {
         </div>
       ) : (
         <div
-          className="grid gap-3 lg:h-[calc(100vh-19rem)] lg:min-h-[420px] lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--panel-w))]"
+          className="grid gap-3 lg:h-[calc(100vh-19rem)] lg:min-h-[420px] lg:grid-rows-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--panel-w))]"
           style={{ ["--panel-w" as string]: `${anchoPanel}px` } as CSSProperties}
         >
         <MapaBase

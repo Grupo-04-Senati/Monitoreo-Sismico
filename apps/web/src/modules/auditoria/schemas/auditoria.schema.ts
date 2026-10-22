@@ -18,6 +18,7 @@ export const ETIQUETA_ACCION: Record<string, string> = {
   admin_creado_por_cli: "Administrador creado (consola)",
   admin_restablecido_por_cli: "Administrador restablecido (consola)",
   fuente_sincronizar: "Sincronización de fuente",
+  sismo_simulado: "Sismo simulado (demo)",
   fuente_configurada: "Fuente configurada",
   dataset_creado: "Dataset creado",
   dataset_aprobado: "Dataset aprobado",

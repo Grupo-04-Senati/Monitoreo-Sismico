@@ -136,8 +136,13 @@ def calcular_resumen(runs: list[IngestionRun]) -> SummaryOut:
         estado, detalle = "sin_datos", "Sin ejecuciones registradas."
     elif recientes and recientes[0].status == RunStatus.FALLIDA:
         estado, detalle = "sin_conexion", "La última ejecución falló; reintento en curso."
-    elif any(r.status in (RunStatus.FALLIDA, RunStatus.CON_ERRORES) for r in recientes):
+    elif any(r.status == RunStatus.FALLIDA for r in recientes):
         estado, detalle = "degradado", "Fallo reciente; el resto de ejecuciones es correcto."
+    elif recientes[0].status == RunStatus.CON_ERRORES:
+        # Registros inválidos descartados: la validación funcionó, pero la última
+        # entrega de la fuente trajo datos con problemas. Una vez que llega una
+        # ejecución limpia deja de contar (no es una caída de la fuente).
+        estado, detalle = "degradado", "La última ejecución descartó registros inválidos de la fuente."
     else:
         estado, detalle = "operativo", "Sincronización al día sin incidencias."
 

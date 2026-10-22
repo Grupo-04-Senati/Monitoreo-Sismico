@@ -3,7 +3,7 @@ import type { EjecucionFuente, FiltrosEjecuciones } from "../types";
 import { listarEjecucionesVentana } from "../services/fuentes.service";
 
 /** Todas las ejecuciones de la ventana filtrada (sin paginar), para el gráfico. */
-export function useEjecucionesVentana(filtros: FiltrosEjecuciones) {
+export function useEjecucionesVentana(filtros: FiltrosEjecuciones, recarga = 0) {
   const [filas, setFilas] = useState<EjecucionFuente[]>([]);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useEjecucionesVentana(filtros: FiltrosEjecuciones) {
     return () => {
       vigente = false;
     };
-  }, [filtros]);
+  }, [filtros, recarga]);
 
   return filas;
 }

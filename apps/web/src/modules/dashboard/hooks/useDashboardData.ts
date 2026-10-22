@@ -13,7 +13,7 @@ import {
 /* ════════════════════════════════════════════════════════════════
    Carga los datos reales del Dashboard (resumen, catálogo, fuentes,
    usuarios y reportes). Cada bloque falla de forma independiente: lo que no
-   llega queda en `null` y la UI lo muestra como "—"/"Pendiente de backend".
+   llega queda en `null` y la UI lo muestra como "—".
    ════════════════════════════════════════════════════════════════ */
 
 export interface DashboardData {
