@@ -16,6 +16,7 @@ import PanelRetencion from "./components/PanelRetencion";
 import HistorialCambios from "./components/HistorialCambios";
 import PanelEntorno from "./components/PanelEntorno";
 import PanelEstado from "./components/PanelEstado";
+import PanelSimulador from "./components/PanelSimulador";
 
 function mensaje(error: unknown, porDefecto: string): string {
   return error instanceof ApiError && error.detail ? error.detail : porDefecto;
@@ -126,6 +127,8 @@ export default function ConfiguracionPage() {
           </button>
         </div>
       )}
+
+      <PanelSimulador />
 
       <div className="mb-4">
         <PanelEstado estado={estado} cargando={comprobando} onActualizar={comprobar} />

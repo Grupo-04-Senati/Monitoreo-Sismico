@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from pathlib import Path
 
 import joblib
 from fastapi import HTTPException, status
@@ -182,6 +183,38 @@ async def crear(
         correlation_id=correlation_id,
     )
     return experimento
+
+
+async def reconstruir_artefacto(db: AsyncSession, experimento: MLExperiment) -> Path:
+    """Vuelve a crear el archivo del modelo si el servidor lo perdió (D28).
+
+    Un experimento guarda su dataset congelado, su tarea y su semilla: reentrenar con
+    ellos da el mismo modelo. Sirve en servidores sin disco persistente (p. ej. Render
+    gratuito) y si se pierde el volumen de artefactos.
+    """
+    dataset = await db.get(Dataset, experimento.dataset_id)
+    if dataset is None or experimento.status != ExperimentStatus.COMPLETADO:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El modelo no se puede reconstruir.")
+    filas = await _filas_dataset(db, dataset)
+    resultado = await asyncio.to_thread(_entrenar, experimento.task_type, dataset, filas, experimento.seed)
+    nombre = experimento.artifact_uri or f"{experimento.id}.joblib"
+    destino = carpeta_artefactos() / nombre
+    await asyncio.to_thread(
+        joblib.dump,
+        {
+            "experimento_id": experimento.id,
+            "tarea": experimento.task_type,
+            "dataset_id": dataset.id,
+            "variables": experimento.feature_spec,
+            "objetivo": experimento.target_name,
+            "mejor": experimento.algorithm,
+            "modelos": resultado.modelos,
+            "versiones": experimento.library_versions,
+            "reconstruido": True,
+        },
+        destino,
+    )
+    return destino
 
 
 async def obtener(db: AsyncSession, experiment_id: str) -> MLExperiment:

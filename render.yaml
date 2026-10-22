@@ -1,0 +1,49 @@
+# Blueprint de Render para la DEMOSTRACIÓN pública de un día (ver docs/DEMO_EN_LINEA.md).
+# Crea una base PostgreSQL gratuita y un servicio web (API + web en el mismo dominio).
+# No es el despliegue de producción (ese es infra/prod, D22).
+databases:
+  - name: sismo-demo-db
+    plan: free
+    databaseName: sismo_db
+    user: sismo
+
+services:
+  - type: web
+    name: sismo-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infra/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: POSTGRES_HOST
+        fromDatabase: { name: sismo-demo-db, property: host }
+      - key: POSTGRES_PORT
+        fromDatabase: { name: sismo-demo-db, property: port }
+      - key: POSTGRES_USER
+        fromDatabase: { name: sismo-demo-db, property: user }
+      - key: POSTGRES_PASSWORD
+        fromDatabase: { name: sismo-demo-db, property: password }
+      - key: POSTGRES_DB
+        fromDatabase: { name: sismo-demo-db, property: database }
+      - key: API_SECRET_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: API_DEBUG
+        value: "false"
+      - key: DB_ECHO
+        value: "false"
+      # La web y la API comparten dominio; CORS solo debe no ser "*" ni localhost.
+      - key: CORS_ORIGINS
+        value: '["https://sismo-demo.onrender.com"]'
+      # Sin Redis en el plan gratuito: un solo proceso, límite de acceso en memoria.
+      - key: LOGIN_THROTTLE_BACKEND
+        value: memoria
+      - key: API_WORKERS
+        value: "1"
+      # Simulador de sismos ficticios (marcados [SIMULADO]) solo para esta demostración.
+      - key: DEMO_SIMULACION
+        value: "true"

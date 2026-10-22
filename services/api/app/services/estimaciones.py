@@ -112,12 +112,14 @@ async def crear(
     fechas = [f.occurred_at for f in filas if f.id in conservados]
     semanas, conteos = conteos_semanales(fechas, inicio_historia, fin_historia)
 
-    if not experimento.artifact_uri or not (carpeta_artefactos() / experimento.artifact_uri).is_file():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El archivo del modelo no está en este servidor: vuelva a entrenar el experimento.",
-        )
-    artefacto = await asyncio.to_thread(joblib.load, carpeta_artefactos() / experimento.artifact_uri)
+    ruta = carpeta_artefactos() / experimento.artifact_uri if experimento.artifact_uri else None
+    if ruta is None or not ruta.is_file():
+        # Sin el archivo (servidor sin disco persistente o volumen perdido): se reentrena
+        # igual, con el mismo dataset congelado y la misma semilla (D28).
+        from app.services.ml_experimentos import reconstruir_artefacto
+
+        ruta = await reconstruir_artefacto(db, experimento)
+    artefacto = await asyncio.to_thread(joblib.load, ruta)
     serie = (experimento.results or {}).get("serie_prueba") or []
     try:
         errores = inferencia_conteo.errores_de_prueba(serie, experimento.algorithm)

@@ -43,6 +43,7 @@ def do_run_migrations(connection) -> None:
 async def run_migrations_online() -> None:
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
+        connect_args={"ssl": "require"} if settings.POSTGRES_SSL else {},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
