@@ -7,9 +7,9 @@ del diseño está en `docs/DECISIONES.md` D28 y D29.
 
 ```
 Navegador ──HTTPS──► Render: servicio "sismo-demo" (API FastAPI que también sirve la web)
-                                   │
-                                   └──► Render: PostgreSQL "sismo-demo-db"
-PC del equipo ──SSL──► misma base (solo para la carga inicial: sismos y cuentas)
+                                   │ SSL
+                                   └──► PostgreSQL: base "sismo_db" (aparte, en una instancia existente)
+PC del equipo ──SSL──► misma base (solo para crearla y la carga inicial: sismos y cuentas)
 ```
 
 ## Qué cambia frente a producción
@@ -22,27 +22,55 @@ PC del equipo ──SSL──► misma base (solo para la carga inicial: sismos 
 | Copias diarias | Ninguna (el estado *Copias de seguridad* lo indica) |
 | Siempre encendido | Se duerme a los 15 min sin uso; despierta en ~1 min |
 
-## 1. Preparar (una vez, ~30 min)
+## 1. La base de datos (~5 min)
 
-1. **Código en `main`**: la rama con `render.yaml` debe estar fusionada.
-2. **Cuenta en Render**: <https://render.com> → *Get Started* → entrar con **GitHub**.
-   El repositorio es de la organización `Grupo-04-Senati`: al conectar GitHub, dar acceso
-   a esa organización (o a ese repositorio). Si no aparece, un dueño de la organización
-   debe aprobar la app de Render.
-3. **Blueprint**: en Render → **New → Blueprint** → elegir `Monitoreo-Sismico` → rama
-   `main` → **Apply**. Crea la base `sismo-demo-db` y el servicio `sismo-demo`. La primera
-   construcción tarda ~5–10 min (compila la web y la imagen). Al terminar, el servicio
-   muestra su dirección, normalmente `https://sismo-demo.onrender.com` (si el nombre ya
-   estaba tomado, Render añade un sufijo; no hace falta cambiar nada).
-4. **Comprobar**: abrir `https://<dirección>/health` → `{"status":"ok"}`, y la dirección
-   principal → pantalla de acceso. Al arrancar, el servicio aplica las migraciones.
+El plan gratuito de Render admite **una sola** base PostgreSQL por cuenta, así que el
+Blueprint no crea la suya: usa una base `sismo_db` **aparte** dentro de una instancia que
+ya exista en la cuenta (en la nuestra, `salesia-db`). Cada base de una instancia tiene sus
+propias tablas: la demo no ve ni toca las de la otra aplicación. Comparten el límite de
+1 GB (la demo usa ~20 MB) y el vencimiento de la instancia gratuita (30 días desde que se
+creó).
 
-## 2. Cargar los datos desde el PC (~10 min)
+1. Render → la instancia (`salesia-db`) → **Connections** → copiar **External Database
+   URL** (`postgresql://USUARIO:CLAVE@HOST/BASE`). No la pegue en chats ni en el repo:
+   contiene la contraseña.
+2. Crear la base de la demo desde el PC (PowerShell, con el PostgreSQL local instalado):
 
-El plan gratuito no tiene consola, así que los datos se cargan desde el PC del equipo
-contra la base de Render. En Render → `sismo-demo-db` → **Connections** → *External
-Database URL*. Tiene la forma `postgresql://USUARIO:CLAVE@HOST/BASE`; de ahí salen los
-valores (el host termina en `render.com`).
+   ```powershell
+   & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "<External Database URL>" -c "CREATE DATABASE sismo_db;"
+   ```
+
+   Debe responder `CREATE DATABASE`. De la URL salen los valores de los pasos siguientes:
+   `USUARIO`, `CLAVE`, `HOST` (termina en `render.com`) y el puerto `5432`. La base es
+   `sismo_db`, no la que trae la URL.
+
+Si la cuenta no tiene ninguna instancia, Render la crea gratis (*New → Postgres → Free*)
+y se sigue igual. Otra opción es una base gratuita de Neon (neon.tech): sus datos de
+conexión se usan de la misma forma.
+
+## 2. El servicio (~15 min)
+
+1. **Código en `main`** con `render.yaml`.
+2. **Cuenta en Render** con **GitHub**, con acceso a la organización `Grupo-04-Senati`.
+3. **Blueprint**: **New → Blueprint** → `Monitoreo-Sismico` → rama `main`. Render pide
+   las variables manuales; completar:
+
+   | Variable | Valor |
+   |---|---|
+   | `POSTGRES_HOST` | `HOST` de la URL externa |
+   | `POSTGRES_PORT` | `5432` |
+   | `POSTGRES_USER` | `USUARIO` de la URL |
+   | `POSTGRES_PASSWORD` | `CLAVE` de la URL |
+   | `POSTGRES_DB` | `sismo_db` |
+
+   → **Deploy Blueprint**. La construcción tarda ~5–10 min. Al arrancar aplica las
+   migraciones en `sismo_db` (en *Logs*: `Running upgrade ... -> 0018_revisiones` y
+   `Uvicorn running`).
+4. **Comprobar**: `https://<dirección>/health` → `{"status":"ok"}`, y la dirección
+   principal → pantalla de acceso. Suele ser `https://sismo-demo.onrender.com`; si el
+   nombre estaba tomado, Render añade un sufijo y no hay que cambiar nada.
+
+## 3. Cargar los datos desde el PC (~10 min)
 
 En PowerShell, desde `services/api` y con el entorno virtual:
 
@@ -51,7 +79,7 @@ $env:POSTGRES_HOST="<HOST>"          # p. ej. dpg-xxxx-a.oregon-postgres.render.
 $env:POSTGRES_PORT="5432"
 $env:POSTGRES_USER="<USUARIO>"
 $env:POSTGRES_PASSWORD="<CLAVE>"
-$env:POSTGRES_DB="<BASE>"
+$env:POSTGRES_DB="sismo_db"
 $env:POSTGRES_SSL="true"
 $env:DEMO_PASSWORD="<contraseña de las cuentas de demo>"   # 8+, con número y símbolo
 
@@ -64,7 +92,7 @@ $env:DEMO_PASSWORD="<contraseña de las cuentas de demo>"   # 8+, con número y 
 Estas variables valen solo para esa ventana de PowerShell: al cerrarla, el PC vuelve a su
 base local (`services/api/.env`). La contraseña de las cuentas no se guarda en el repo.
 
-## 3. El día de la demostración
+## 4. El día de la demostración
 
 1. **1–2 minutos antes**, abrir la dirección para despertar el servidor.
 2. Seguir `docs/GUION_DEMO.md` con las cuentas `demo-<rol>@empresa-ejemplo.pe`.
@@ -87,7 +115,7 @@ Siempre se distingue de los reales: su lugar empieza con `[SIMULADO]` y su fuent
 guion (*Mina Arequipa M4.5, 300 km*) y simular un M5.2 con 2 réplicas en Mina Arequipa →
 3 sismos y avisos en el Centro de alertas.
 
-## 4. Qué explicar
+## 5. Qué explicar
 
 **Uso empresarial.** Una minera, eléctrica o constructora con activos en zonas sísmicas
 necesita saber en minutos si un sismo ocurrió cerca de sus instalaciones, decidir quién
@@ -113,19 +141,28 @@ Nunca predice sismos ni reemplaza al IGP o INDECI.
 - Calidad: más de 400 pruebas automáticas del backend, 18 E2E con accesibilidad, CI que
   construye y prueba también esta imagen de Render en cada cambio.
 
-## 5. Si algo falla
+## 6. Si algo falla
 
 | Síntoma | Causa y solución |
 |---|---|
 | La página tarda ~1 min | El servidor dormía. Normal en el plan gratuito |
 | El build falla en Render | Ver *Logs* del servicio. El CI (trabajo `render`) construye la misma imagen en cada PR |
 | "No se pudo conectar" al cargar datos | Revisar `POSTGRES_SSL=true` y que el host sea el **externo** |
+| Blueprint: "cannot have more than one active free tier database" | Versión vieja del `render.yaml`: el actual no crea base (paso 1) |
+| `permission denied to create database` | Usar una base gratuita de Neon (paso 1) |
 | El simulador no aparece | Debe entrar como Administrador y el servicio tener `DEMO_SIMULACION=true` |
 | Simular no genera avisos | Ninguna regla **activa** cubre la zona o la magnitud |
 | *Ingesta* en Atención | No hay sincronización automática: *Sincronización manual* en Fuentes de datos |
-| Se olvidó la contraseña de demo | Repetir `preparar_demo cuentas` con otra `DEMO_PASSWORD` (paso 2) |
+| Se olvidó la contraseña de demo | Repetir `preparar_demo cuentas` con otra `DEMO_PASSWORD` (paso 3) |
 
-## 6. Después
+## 7. Después
 
-Render → `sismo-demo` → *Settings* → **Delete Web Service**, y `sismo-demo-db` →
-**Delete Database**. Así no queda nada publicado. La base gratuita vence sola a los 30 días.
+1. Render → **Blueprints** → `sismora-demo` → *Settings* → borrar el Blueprint, y el
+   servicio `sismo-demo` → *Settings* → **Delete Web Service**.
+2. Borrar **solo** la base de la demo (no la instancia, que es de otra aplicación):
+
+   ```powershell
+   & "C:\Program Files\PostgreSQL\18\bin\psql.exe" "<External Database URL>" -c "DROP DATABASE sismo_db;"
+   ```
+
+Así no queda nada publicado ni datos de la demo.

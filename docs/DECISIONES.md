@@ -407,6 +407,8 @@ solo se registran los puntos grises.
   2. **Un solo servicio**: con `WEB_DIST_DIR` la API sirve también la web compilada (misma
      CSP que Caddy). Web y API comparten dominio, así las cookies de sesión funcionan sin
      CORS ni reescrituras. `infra/render/Dockerfile` y `render.yaml` lo arman.
+     El Blueprint no crea base (el plan gratuito admite una por cuenta): pide los datos
+     de conexión de una base `sismo_db` aparte en una instancia existente.
   3. `POSTGRES_SSL=true` para conectar desde un PC a una base que exige SSL (cargar los
      datos iniciales en Render, que en el plan gratuito no da consola).
 - **Motivo:** en una demostración no tiembla a pedido; los avisos solo se ven si llega un

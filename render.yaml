@@ -1,11 +1,11 @@
 # Blueprint de Render para la DEMOSTRACIÓN pública de un día (ver docs/DEMO_EN_LINEA.md).
-# Crea una base PostgreSQL gratuita y un servicio web (API + web en el mismo dominio).
-# No es el despliegue de producción (ese es infra/prod, D22).
-databases:
-  - name: sismo-demo-db
-    plan: free
-    databaseName: sismo_db
-    user: sismo
+# Crea un servicio web (API + web en el mismo dominio). No es el despliegue de
+# producción (ese es infra/prod, D22).
+#
+# La base PostgreSQL no se crea aquí: el plan gratuito de Render admite una sola base
+# por cuenta. Al aplicar el Blueprint, Render pide los datos de conexión (POSTGRES_*) de
+# una base ya existente: otra base dentro de una instancia de Render que ya tenga, o una
+# gratuita de otro proveedor (p. ej. Neon). Siempre por SSL (POSTGRES_SSL).
 
 services:
   - type: web
@@ -19,15 +19,17 @@ services:
       - key: ENV
         value: production
       - key: POSTGRES_HOST
-        fromDatabase: { name: sismo-demo-db, property: host }
+        sync: false
       - key: POSTGRES_PORT
-        fromDatabase: { name: sismo-demo-db, property: port }
+        sync: false
       - key: POSTGRES_USER
-        fromDatabase: { name: sismo-demo-db, property: user }
+        sync: false
       - key: POSTGRES_PASSWORD
-        fromDatabase: { name: sismo-demo-db, property: password }
+        sync: false
       - key: POSTGRES_DB
-        fromDatabase: { name: sismo-demo-db, property: database }
+        sync: false
+      - key: POSTGRES_SSL
+        value: "true"
       - key: API_SECRET_KEY
         generateValue: true
       - key: COOKIE_SECURE
