@@ -380,3 +380,39 @@ solo se registran los puntos grises.
 - **Descartado:** sobrescribir sin historial (rompe datasets y modelos congelados, D16 y
   D17) y copiar todos los valores en cada dataset (duplica el catálogo).
 
+
+## D28. El modelo aprobado se reconstruye si falta su archivo
+
+- **Decisión:** si al generar una estimación no está el archivo `.joblib` del modelo, la
+  API lo vuelve a entrenar con el dataset congelado y la semilla guardados en el
+  experimento, lo deja en la carpeta de artefactos (marcado `reconstruido`) y sigue.
+- **Motivo:** en servidores con disco efímero (Render gratuito, contenedores sin volumen)
+  el archivo se pierde al reiniciar. El dataset aprobado no cambia (D16, D27) y el
+  entrenamiento es determinista, así que el resultado es idéntico (lo comprueba
+  `test_sin_el_archivo_del_modelo_se_reconstruye_igual`).
+- **Costo:** la primera estimación tras un reinicio tarda unos segundos más.
+- **Descartado:** guardar el modelo en la base (archivos binarios grandes en PostgreSQL) y
+  exigir un volumen persistente (no existe en el plan gratuito).
+
+## D29. Demostración en línea: simulador de sismos y un solo servicio
+
+- **Decisión:** para mostrar la plataforma públicamente un día (docs/DEMO_EN_LINEA.md):
+  1. **Simulador** (`DEMO_SIMULACION=true`, apagado por defecto): el Administrador crea
+     sismos **ficticios** en Configuración. Pasan por el mismo camino que uno real
+     (ejecución de ingesta, departamento, reglas activas, avisos y auditoría). Es la única
+     excepción a "sin datos inventados" y está marcada: fuente "Simulador de demostración
+     (datos ficticios)", deshabilitada para sincronizar; lugar con prefijo `[SIMULADO]`;
+     advertencia en el estado de la configuración. Con el simulador apagado la ruta
+     responde 404.
+  2. **Un solo servicio**: con `WEB_DIST_DIR` la API sirve también la web compilada (misma
+     CSP que Caddy). Web y API comparten dominio, así las cookies de sesión funcionan sin
+     CORS ni reescrituras. `infra/render/Dockerfile` y `render.yaml` lo arman.
+  3. `POSTGRES_SSL=true` para conectar desde un PC a una base que exige SSL (cargar los
+     datos iniciales en Render, que en el plan gratuito no da consola).
+- **Motivo:** en una demostración no tiembla a pedido; los avisos solo se ven si llega un
+  sismo. El plan gratuito de Render no tiene Redis, worker ni consola.
+- **Costo:** sin worker ni beat no hay sincronización automática (la manual sí funciona) y
+  el estado de la ingesta pasa a *Atención* tras unas horas. El servidor gratuito se
+  duerme a los 15 min sin uso (~1 min en despertar) y la base gratuita vence a los 30 días.
+- **Descartado:** cargar sismos de ejemplo fijos (se confundirían con los reales) y separar
+  web estática y API (cookies entre dominios).

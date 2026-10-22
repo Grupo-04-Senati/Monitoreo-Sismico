@@ -30,6 +30,7 @@ from app.routers import (
     usuarios,
     auditoria,
     configuracion,
+    demo,
     monitoreo,
 )
 from app.services.audit import esperar_auditoria
@@ -107,6 +108,7 @@ app.include_router(usuarios.roles_router, prefix=API_PREFIX, tags=["usuarios"])
 app.include_router(auditoria.router, prefix=f"{API_PREFIX}/audit-logs", tags=["auditoria"])
 app.include_router(configuracion.router, prefix=f"{API_PREFIX}/settings", tags=["configuracion"])
 app.include_router(monitoreo.router, prefix=f"{API_PREFIX}/monitoring", tags=["monitoreo"])
+app.include_router(demo.router, prefix=f"{API_PREFIX}/demo", tags=["demo"])
 
 
 @app.get("/health")
@@ -149,3 +151,34 @@ async def meta(db: AsyncSession = Depends(get_db)):
         "data_max_day": mx.astimezone(u5).date().isoformat() if mx else None,
         "last_sync_at": last.isoformat().replace("+00:00", "Z") if last else None,
     }
+
+
+# ── Web compilada servida por la propia API (despliegue de un solo servicio, D29) ──
+# Solo si WEB_DIST_DIR apunta a `apps/web/dist`. Va al final: las rutas de la API y
+# /health tienen prioridad; cualquier otra ruta devuelve la app (enrutado del navegador).
+if settings.WEB_DIST_DIR:
+    from pathlib import Path as _Path
+
+    from fastapi import HTTPException as _HTTPException
+    from fastapi.responses import FileResponse as _FileResponse
+    from fastapi.staticfiles import StaticFiles as _StaticFiles
+
+    _WEB = _Path(settings.WEB_DIST_DIR).resolve()
+    if (_WEB / "index.html").is_file():
+        if (_WEB / "assets").is_dir():
+            app.mount("/assets", _StaticFiles(directory=_WEB / "assets"), name="assets")
+        _CSP = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; "
+            "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        )
+
+        @app.api_route("/{ruta:path}", methods=["GET", "HEAD"], include_in_schema=False)
+        async def web_compilada(ruta: str):
+            if ruta.startswith("api/"):
+                raise _HTTPException(status_code=404, detail="Not Found")
+            archivo = (_WEB / ruta).resolve()
+            if ruta and archivo.is_file() and archivo.is_relative_to(_WEB):
+                return _FileResponse(archivo)
+            return _FileResponse(_WEB / "index.html", headers={"Cache-Control": "no-cache", "Content-Security-Policy": _CSP})
+

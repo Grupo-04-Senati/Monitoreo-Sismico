@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     #: "redis" o "memoria". Con varios procesos de API debe ser Redis (D25).
     LOGIN_THROTTLE_BACKEND: str = "auto"
 
+    #: Simulador de sismos ficticios para demostraciones (D29). Nunca en una instalación real.
+    DEMO_SIMULACION: bool = False
+    #: Carpeta con la web compilada para servirla desde la API (despliegue de un solo
+    #: servicio, p. ej. Render). Vacío = la web la sirve Caddy o Vite.
+    WEB_DIST_DIR: str = ""
+    #: Exigir SSL al conectar con PostgreSQL (bases administradas externas, p. ej. Render).
+    POSTGRES_SSL: bool = False
+
     #: Clave de la fuente única del MVP (mientras no exista la fuente real).
     INGESTION_SOURCE_KEY: str = "igp"
     #: Frecuencia de la ingesta programada (minutos).

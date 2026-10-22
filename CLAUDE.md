@@ -73,6 +73,8 @@ No las "arregles" sin hablar con el equipo:
 ## 5. Reglas de trabajo (resumen; detalle en `AGENTS.md`)
 
 - Sin datos de ejemplo ni valores inventados (UI, API o seeds).
+  Única excepción: el simulador de la demo en línea (`DEMO_SIMULACION=true`, apagado por
+  defecto), con fuente propia y lugar `[SIMULADO]` (D29).
 - **Autorización siempre en el backend** con `require_role()` / `require_permission()`
   (`services/api/app/core/permissions.py`); el frontend solo oculta.
 - **Secretos solo en variables de entorno.** Nada de contraseñas en el repo. La cuenta

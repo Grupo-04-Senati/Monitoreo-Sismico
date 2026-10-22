@@ -222,6 +222,8 @@ async def entorno(db: AsyncSession) -> dict[str, Any]:
         advertencias.append("En producción las cookies deben ser seguras (COOKIE_SECURE=true, con HTTPS).")
     if produccion and settings.API_DEBUG:
         advertencias.append("API_DEBUG está activo en producción.")
+    if settings.DEMO_SIMULACION:
+        advertencias.append("Simulación de demostración activa: hay sismos ficticios marcados [SIMULADO] (D29).")
     if settings.ALERT_EMAIL_ENABLED and not canal_email.configurado():
         advertencias.append("El correo de avisos está activado pero faltan SMTP_HOST o SMTP_FROM: las entregas fallarán.")
     return {

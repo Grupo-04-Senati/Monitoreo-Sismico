@@ -117,6 +117,8 @@ npm run build
   Pendiente: mapa propio en el Dashboard (hoy remite al Mapa sísmico).
 - **Ingesta**: fuente USGS funcionando (D15) con correcciones de la fuente aplicadas e
   historial de revisiones (D27). Pendiente: el IGP como segunda fuente.
+- **Demo en línea**: `render.yaml` + `infra/render/Dockerfile` (API sirve la web, simulador
+  de sismos ficticios, modelo reconstruible; D28, D29). Guía en `docs/DEMO_EN_LINEA.md`.
 
 ### 4.3 Pruebas faltantes (backlog)
 - [x] **403 por rol**: matriz de los 5 roles en `tests/api/test_autorizacion.py`.
@@ -131,6 +133,7 @@ npm run build
 ## 5. Reglas recordatorio
 
 - Sin datos de ejemplo ni inventados. Falta un dato → `null` / `"—"`.
+  Excepción marcada: el simulador de la demo en línea (D29, `docs/DEMO_EN_LINEA.md`).
 - Estados distintos: observado / pendiente de validación / estimación experimental /
   comunicado oficial. Nunca una estimación de ML como alerta oficial.
 - Autorización siempre en el backend (`require_role()`).

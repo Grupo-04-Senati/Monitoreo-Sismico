@@ -172,3 +172,26 @@ def test_regresion_lineal_no_genera_estimaciones(auditoria):
         r = c.post("/api/v1/estimates", json={"model_id": modelo_id})
     assert r.status_code == 409 and "conteo semanal" in r.json()["detail"]
     assert not any(a["action"] == "estimacion_creada" for a in auditoria)
+
+
+def test_sin_el_archivo_del_modelo_se_reconstruye_igual(auditoria):
+    """Servidor sin disco persistente (Render gratuito) o volumen perdido: el modelo se
+    reentrena con su dataset congelado y su semilla, y la estimación sale igual (D28)."""
+    with _cliente("admin") as c:
+        modelo_id = _modelo_aprobado(c, "conteo_semanal")
+        experimento = next(m for m in c.get("/api/v1/ml/models").json()["items"] if m["id"] == modelo_id)
+        primera = c.post("/api/v1/estimates", json={"model_id": modelo_id}).json()
+
+    archivos = list(carpeta_artefactos().glob(f"{experimento['experiment_id']}.joblib"))
+    assert archivos, "el entrenamiento debió guardar el archivo"
+    for a in archivos:
+        a.unlink()
+
+    with _cliente("admin") as c:
+        r = c.post("/api/v1/estimates", json={"model_id": modelo_id})
+    assert r.status_code == 201, r.text
+    segunda = r.json()
+    assert (segunda["value"], segunda["lower_bound"], segunda["upper_bound"]) == (
+        primera["value"], primera["lower_bound"], primera["upper_bound"],
+    )
+    assert carpeta_artefactos().joinpath(f"{experimento['experiment_id']}.joblib").is_file()

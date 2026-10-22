@@ -12,6 +12,9 @@ catálogo real (7 609 sismos). Los números de referencia pueden variar un poco 
 
 ## Antes de la demo (una vez, ~10 min)
 
+> **Demo en línea** (Render, dirección pública): seguir `docs/DEMO_EN_LINEA.md`, que hace
+> estos mismos pasos contra la base de Render. Lo de abajo es para una demo en local.
+
 En `services/api`, con el entorno virtual:
 
 ```bash
@@ -90,8 +93,14 @@ para cambiar de usuario sin cerrar sesión.
   regla → **Activar**.
 
 ### 8. Centro de alertas (Operador) — 3 min
-- En la terminal (simula que llegan los sismos de los últimos 60 días):
-  `python -m app.scripts.preparar_demo avisos --dias 60` → referencia: ~4 avisos.
+- Hacer llegar sismos, de una de estas dos formas:
+  - **En vivo (demo en línea)**: como admin → Configuración → *Simulador de sismos* →
+    zona *Mina Arequipa*, magnitud `5.2`, *Uno con 2 réplicas* → **Simular sismo** →
+    3 sismos ficticios `[SIMULADO]` con departamento Arequipa y sus avisos. Mostrar que
+    también aparecen en Eventos (24 h), Fuentes de datos (ejecución propia) y Auditoría.
+  - **Con sismos reales**: en la terminal (los sismos de los últimos 60 días, como si
+    acabaran de llegar) `python -m app.scripts.preparar_demo avisos --dias 60` →
+    referencia: ~4 avisos.
 - Como operador → **Centro de alertas** → pestaña *Pendiente de aprobación* → abrir uno:
   sismo observado, mensaje ("no es una alerta oficial"), historial.
 - **Aprobar y enviar** → entrega *Plataforma: Entregada* (y *Correo: Simulada* si la regla
@@ -126,6 +135,6 @@ para cambiar de usuario sin cerrar sesión.
 
 ## Cierre (lo que respalda la demo)
 
-- 398 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
+- 414 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
   despliegue con HTTPS y simulacro de restauración verificados en cada cambio (CI).
-- Decisiones documentadas (D14–D27), manual técnico y checklist de aceptación en `docs/`.
+- Decisiones documentadas (D14–D29), manual técnico y checklist de aceptación en `docs/`.

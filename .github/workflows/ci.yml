@@ -232,3 +232,52 @@ jobs:
       - name: Pruebas E2E
         working-directory: apps/web
         run: npm run e2e
+
+  render:
+    name: Imagen de demostración (Render)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sismo
+          POSTGRES_PASSWORD: sismo_render_ci
+          POSTGRES_DB: sismo_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sismo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen de Render
+        run: docker build -f infra/render/Dockerfile -t sismo-demo .
+      - name: Arrancar como en Render (producción, un servicio, puerto en $PORT)
+        run: |
+          docker run -d --name sismo-demo --network host \
+            -e ENV=production -e PORT=10000 \
+            -e POSTGRES_HOST=localhost -e POSTGRES_PORT=5432 -e POSTGRES_USER=sismo \
+            -e POSTGRES_PASSWORD=sismo_render_ci -e POSTGRES_DB=sismo_db \
+            -e API_SECRET_KEY="$(openssl rand -hex 32)" -e COOKIE_SECURE=true \
+            -e CORS_ORIGINS='["https://sismo-demo.onrender.com"]' \
+            -e LOGIN_THROTTLE_BACKEND=memoria -e DEMO_SIMULACION=true \
+            sismo-demo
+          for i in $(seq 1 60); do curl -fsS http://localhost:10000/health && break; sleep 2; done
+      - name: Prueba de humo (web y API en el mismo dominio)
+        run: |
+          set -e
+          curl -fsS http://localhost:10000/ | grep -q 'id="root"'
+          curl -fsS http://localhost:10000/eventos | grep -q 'id="root"'
+          curl -fsSI http://localhost:10000/configuracion | grep -qi 'content-security-policy'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:10000/api/v1/auth/me)" = "401"
+          curl -fsS http://localhost:10000/api/v1/meta | grep -q 'data_'
+          ASSET=$(curl -fsS http://localhost:10000/ | grep -o '/assets/[^"]*\.js' | head -1)
+          curl -fsS "http://localhost:10000$ASSET" > /dev/null
+      - name: Registros si algo falló
+        if: failure()
+        run: |
+          docker logs sismo-demo 2>&1 | tail -80
+          echo "::error title=Registros de la imagen de Render::$(docker logs sismo-demo 2>&1 | tail -30 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')"
