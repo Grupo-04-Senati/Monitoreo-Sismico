@@ -81,6 +81,7 @@ RUTAS_B: list[tuple[str, str, str]] = [
     ("GET", "/api/v1/settings", "configuracion"),
     ("GET", "/api/v1/monitoring", "configuracion"),
     ("GET", "/api/v1/regions/geojson", "mapa"),
+    ("GET", "/api/v1/regions/mundo", "mapa"),
     ("GET", "/api/v1/demo/status", "rol:admin"),
     ("POST", "/api/v1/demo/simulate", "rol:admin"),
     ("GET", "/api/v1/settings/history", "configuracion"),

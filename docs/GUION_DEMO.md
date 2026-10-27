@@ -57,7 +57,10 @@ para cambiar de usuario sin cerrar sesión.
   Abrir un sismo → magnitud, profundidad, hora (UTC-5) y, en *Procedencia y datos
   técnicos*, el **enlace al evento en el USGS**.
 - **Mapa sísmico**: se carga solo la capa **Límites departamentales (INEI)**, 25 de 25
-  regiones, sombreadas por número de sismos. Clic en Arequipa → filtra.
+  regiones, sombreadas por número de sismos. Clic en Arequipa → filtra. Luego **Mundo · en
+  vivo**: sismos M4.5+ del planeta (7 días), el Cinturón de Fuego y el recuadro de la zona
+  del Perú; clic en el más fuerte → detalle y enlace al USGS. En el Dashboard, la tarjeta
+  "Mapa de eventos" tiene los botones Perú / Mundo.
 - **Análisis estadístico**: gráficos con los mismos filtros.
 
 ### 3. Fuentes de datos — 1 min
@@ -137,4 +140,4 @@ para cambiar de usuario sin cerrar sesión.
 
 - 414 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
   despliegue con HTTPS y simulacro de restauración verificados en cada cambio (CI).
-- Decisiones documentadas (D14–D29), manual técnico y checklist de aceptación en `docs/`.
+- Decisiones documentadas (D14–D30), manual técnico y checklist de aceptación en `docs/`.

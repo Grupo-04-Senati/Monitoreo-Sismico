@@ -163,6 +163,12 @@ registrar_auditoria(
 
 - `GET /api/v1/regions/geojson` (permiso `mapa`): límites de los 25 departamentos, con
   `properties.nombre` igual al campo `region` de los eventos (D24).
+- `GET /api/v1/regions/mundo` (permiso `mapa`): contornos de 177 países (Natural Earth),
+  `properties.nombre` (español) e `iso` (ISO 3166-1 alfa-3) (D30).
+- `GET /api/v1/world/events?periodo=dia|semana|mes` (permiso `mapa`): sismos M4.5+ del mundo
+  en vivo desde el USGS, `{periodo, fuente, generado_fuente, total, desactualizado, items:
+  [{id, magnitud, tipo_magnitud, lugar, fecha, lat, lon, profundidad_km, estado, url,
+  zona_peru}]}`; 503 si el USGS no responde y no hay copia (D30).
 
 ## 7g. Monitoreo
 

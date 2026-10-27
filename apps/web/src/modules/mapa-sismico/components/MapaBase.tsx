@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import type { CapaMapa, EventoSismico, GeoRegiones, RegionResumen } from "../types";
-import { COLOR_PUNTO, SIN_EVENTOS, agruparPuntos, crearProyector, escalaCian, radioMagnitud } from "../lib/geo";
+import { COLOR_PUNTO, SIN_EVENTOS, agruparPuntos, crearProyector, escalaCian, pathDePoligonos, radioMagnitud } from "../lib/geo";
 import { IconAlertTriangle, IconLayers, IconMapPin, IconUpload } from "@/components/ui/Icons";
 import LeyendaMapa from "./LeyendaMapa";
 import { CAPA_OFICIAL } from "../hooks/useGeoJSON";
@@ -24,19 +24,7 @@ interface MapaBaseProps {
 
 const COLOR_RADIO = "var(--accent-600)";
 
-function pathDeForma(polys: [number, number][][][], proy: (lon: number, lat: number) => [number, number]): string {
-  const partes: string[] = [];
-  for (const poly of polys) {
-    for (const anillo of poly) {
-      anillo.forEach(([lon, lat], i) => {
-        const [x, y] = proy(lon, lat);
-        partes.push(`${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
-      });
-      partes.push("Z");
-    }
-  }
-  return partes.join(" ");
-}
+const pathDeForma = pathDePoligonos;
 
 /**
  * Mapa base del módulo. Usa la capa oficial de departamentos que entrega la API
