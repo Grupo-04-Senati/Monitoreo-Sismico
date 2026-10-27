@@ -419,3 +419,22 @@ solo se registran los puntos grises.
   duerme a los 15 min sin uso (~1 min en despertar) y la base gratuita vence a los 30 días.
 - **Descartado:** cargar sismos de ejemplo fijos (se confundirían con los reales) y separar
   web estática y API (cookies entre dominios).
+
+## D30. Vista mundial en vivo, sin ampliar el catálogo de trabajo
+
+- **Decisión:** el Mapa sísmico tiene dos vistas: **Perú** (el catálogo guardado, sin
+  cambios) y **Mundo**: sismos M4.5+ del planeta de las últimas 24 h, 7 o 30 días, pedidos
+  en el momento al resumen público del USGS (`GET /api/v1/world/events`), reutilizados 5
+  minutos en memoria y **no guardados** en la base. Si el USGS no responde se muestra la
+  última copia, marcada; sin copia, 503 con el motivo. Los países salen de Natural Earth
+  (dominio público, `GET /api/v1/regions/mundo`). La tarjeta "Mapa de eventos" del
+  Dashboard muestra el mapa (Perú por departamento con los filtros de la tarjeta, o Mundo).
+- **Motivo:** dar contexto (el Perú está en el Cinturón de Fuego del Pacífico) y la vista
+  mundial pedida para la demo, sin distorsionar lo operativo: reglas de aviso, datasets,
+  modelos e indicadores siguen siendo solo de la zona del Perú. El mundo son ~8 500 sismos
+  M4.5+ al año: guardarlos desde 2000 superaría la base gratuita y la carga del navegador.
+- **Costo:** sin historia mundial (máximo 30 días) y depende del USGS en línea; los sismos
+  del mundo no generan avisos ni entran a datasets. La consulta usa los certificados del
+  sistema operativo (como el conector de ingesta) por equipos con inspección TLS.
+- **Descartado:** guardar el mundo en la base (separar Perú/mundo en todo el sistema) y
+  consultar al USGS desde el navegador (la CSP solo permite la propia API).

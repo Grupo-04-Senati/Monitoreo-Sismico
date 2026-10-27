@@ -5,7 +5,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { SOURCE_NAME } from "@/config/fuente";
 import { DATA_RANGE_LABEL } from "@/lib/ancla";
 import { fmtTimeUTC5 } from "@/lib/format";
@@ -20,11 +20,20 @@ import ChipsMapa from "./components/ChipsMapa";
 import MapaBase from "./components/MapaBase";
 import PanelRegiones from "./components/PanelRegiones";
 import ModalMapa from "./components/ModalMapa";
+import VistaMundo from "./components/VistaMundo";
 import DetalleEventoModal from "@/modules/eventos/components/DetalleEventoModal";
 import type { EventoSismico } from "@/types";
 import { IconClock, IconExpand } from "@/components/ui/Icons";
 
+const btnVista = (activo: boolean) =>
+  `px-3.5 py-1.5 text-xs font-medium transition-colors ${
+    activo ? "bg-accent-600 text-white" : "bg-surface text-content-secondary hover:bg-surface-tertiary"
+  }`;
+
 export default function MapaPage() {
+  // Vista Perú (catálogo de trabajo) o Mundo (contexto en vivo, D30); vive en la URL.
+  const [params, setParams] = useSearchParams();
+  const vista = params.get("vista") === "mundo" ? "mundo" : "peru";
   const { filtros, errores, hayFiltros, setFiltros, quitarChip, limpiar } = useFiltrosMapaURL();
   const { geo, error: errorGeo, nombreArchivo, cargar, limpiar: limpiarGeo } = useGeoJSON();
 
@@ -112,6 +121,7 @@ export default function MapaPage() {
             <IconClock size={14} />
             Actualizado: <b className="font-medium text-content-secondary">{actTime}</b> (UTC-5)
           </span>
+          {vista === "peru" && (
           <button
             type="button"
             onClick={() => setModalAbierto(true)}
@@ -120,9 +130,23 @@ export default function MapaPage() {
             <IconExpand size={14} />
             Vista ampliada
           </button>
+          )}
         </div>
       </div>
 
+      <div className="mb-3 inline-flex overflow-hidden rounded-md border border-border" role="group" aria-label="Vista del mapa">
+        <button type="button" className={btnVista(vista === "peru")} aria-pressed={vista === "peru"} onClick={() => setParams({}, { replace: true })}>
+          Perú · catálogo de trabajo
+        </button>
+        <button type="button" className={btnVista(vista === "mundo")} aria-pressed={vista === "mundo"} onClick={() => setParams({ vista: "mundo" }, { replace: true })}>
+          Mundo · en vivo
+        </button>
+      </div>
+
+      {vista === "mundo" ? (
+        <VistaMundo />
+      ) : (
+      <>
       <AvisoMapa />
 
       <FiltrosMapa filtros={filtros} errores={errores} hayFiltros={hayFiltros} onCambiar={setFiltros} onLimpiar={limpiar} />
@@ -199,6 +223,8 @@ export default function MapaPage() {
         Fuente: {SOURCE_NAME} · {resumenFiltros(filtros)} · n={catalogo ? eventos.length.toLocaleString("es-PE") : "—"} · Catálogo:{" "}
         {DATA_RANGE_LABEL || "—"} · Actualizado: {actTime} (UTC-5)
       </p>
+      </>
+      )}
 
       {/* Detalle de evento */}
       {evento && (

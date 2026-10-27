@@ -83,7 +83,7 @@ function anillosDe(coords: unknown): Coord[][] {
     .filter((anillo) => anillo.length >= 3);
 }
 
-function polysDe(geometry: unknown): Coord[][][] {
+export function polysDe(geometry: unknown): Coord[][][] {
   if (!geometry || typeof geometry !== "object") return [];
   const g = geometry as { type?: string; coordinates?: unknown };
   if (g.type === "Polygon") {
@@ -152,6 +152,21 @@ export function parseGeoRegiones(texto: string): GeoRegiones {
   }
 
   return { formas, sinNombre, noCoinciden, bbox: bboxDe(formas) };
+}
+
+/** Trazo SVG (`d`) de una lista de polígonos ya proyectados. */
+export function pathDePoligonos(polys: Coord[][][], proy: (lon: number, lat: number) => [number, number]): string {
+  const partes: string[] = [];
+  for (const poly of polys) {
+    for (const anillo of poly) {
+      anillo.forEach(([lon, lat], i) => {
+        const [x, y] = proy(lon, lat);
+        partes.push(`${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`);
+      });
+      partes.push("Z");
+    }
+  }
+  return partes.join(" ");
 }
 
 /* ════ Proyección ════ */

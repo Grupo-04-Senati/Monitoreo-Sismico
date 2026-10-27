@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import MiniMapa from "@/modules/mapa-sismico/components/MiniMapa";
 import ExpandModal from "@/components/ui/ExpandModal";
 import AreaChart from "@/components/charts/AreaChart";
 import HBarChart from "@/components/charts/HBarChart";
@@ -403,6 +404,10 @@ export default function DashboardPage() {
 
   /* ── Estado de los modales ─────────────────────────── */
   const [expanded, setExpanded] = useState<ModalKind | null>(null);
+  // Tarjeta "Mapa de eventos": Perú (sismos del periodo por departamento) o Mundo en vivo (D30).
+  const [vistaMapa, setVistaMapa] = useState<"peru" | "mundo">("peru");
+  const [mundoN, setMundoN] = useState<number | null>(null);
+  const navigate = useNavigate();
   const [calidadOpen, setCalidadOpen] = useState(false);
   const verCalidad = canAccess("fuentes");
   const calidad = useCalidadDatos(verCalidad);
@@ -872,18 +877,35 @@ export default function DashboardPage() {
         <AnalyticCard
           title="Mapa de eventos"
           moduleLabel="Mapa sísmico"
-          to="/mapa-sismico"
-          onOpen={() => openModal("mapa")}
+          to={vistaMapa === "mundo" ? "/mapa-sismico?vista=mundo" : "/mapa-sismico"}
+          onOpen={vistaMapa === "mundo" ? () => navigate("/mapa-sismico?vista=mundo") : () => openModal("mapa")}
           footer={
-            <span>
-              Fuente: {SRC} · Periodo: {pLabel} · n={filtered.length} · {regionsWithEvents} de {REGION_OPTIONS.length} regiones con eventos
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="inline-flex overflow-hidden rounded border border-border" role="group" aria-label="Vista del mapa">
+                {(["peru", "mundo"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={vistaMapa === v}
+                    onClick={() => setVistaMapa(v)}
+                    className={`px-2 py-0.5 text-[11px] ${vistaMapa === v ? "bg-accent-600 text-white" : "text-content-secondary hover:bg-surface-tertiary"}`}
+                  >
+                    {v === "peru" ? "Perú" : "Mundo"}
+                  </button>
+                ))}
+              </span>
+              {vistaMapa === "peru" ? (
+                <span>
+                  Fuente: {SRC} · Periodo: {pLabel} · n={filtered.length} · {regionsWithEvents} de {REGION_OPTIONS.length} regiones con eventos
+                </span>
+              ) : (
+                <span>Fuente: USGS en vivo · M4.5+ · últimos 7 días · n={mundoN ?? "—"} · no afectado por filtros</span>
+              )}
             </span>
           }
         >
-          <div className="chart-plot flex h-[300px] items-center justify-center rounded-lg px-4 text-center">
-            <p className="text-xs text-content-muted">
-              Los eventos por departamento se ven sobre los límites oficiales en el módulo Mapa sísmico.
-            </p>
+          <div className="chart-plot h-[300px] rounded-lg p-1">
+            <MiniMapa vista={vistaMapa} regiones={filtered.map((e) => e.region)} onMundo={(d) => setMundoN(d ? d.total : null)} />
           </div>
         </AnalyticCard>
       </div>
