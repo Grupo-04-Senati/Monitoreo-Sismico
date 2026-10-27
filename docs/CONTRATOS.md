@@ -142,11 +142,18 @@ registrar_auditoria(
 - `/api/v1/alert-rules` (permiso `reglas`): `GET`, `POST`, `GET/PUT /{id}`,
   `POST /simulate` (`{regla, dias}`, no crea nada), `POST /{id}/deactivate`.
   `POST /{id}/activate` solo Administrador. Se crean inactivas; editar una activa da 409.
+  `canales` ⊂ `app | email | sms`; con `sms`, `roles_sms` (≥ 1 rol) dice quién lo recibe (D31).
 - `/api/v1/alerts` (permiso `alertas`): `GET` (filtros `estado`, `severidad`, `regla`;
   paginado), `GET /{id}`, `POST /{id}/approve`, `/cancel` (`{motivo}`), `/acknowledge`,
   `/retry`. Transición no válida: 409.
 - Cada aviso trae `categoria = "aviso_interno"`, nombre de la regla, resumen del evento y
-  sus entregas (`entregada`, `simulada` o `fallida`). Plantillas con marcadores
+  sus entregas (`entregada`, `simulada` o `fallida`). Las de SMS tienen `destination =
+  "usuario:<id>"` y `destino_etiqueta` = nombre + número enmascarado.
+- `/api/v1/me/telefono` (cualquier usuario con sesión, solo el propio): `GET` estado
+  (`telefono` enmascarado, `verificado`, `consentimiento_at`, `sms_configurado`); `POST`
+  `{telefono, consentimiento: true}` guarda el número y envía el código (429 si se pide de
+  nuevo antes de 1 min; en la demo sin Twilio devuelve `codigo_demo`); `POST /verificar`
+  `{codigo}` (400 incorrecto, 410 vencido, 429 tras 5 intentos); `DELETE` baja (D31). Plantillas con marcadores
   `{magnitud} {tipo} {lugar} {fecha} {profundidad} {distancia} {zona} {regla} {enlace}`.
 - `GET /api/v1/dashboard/summary` → `active_alerts`: avisos que piden acción
   (`pendiente_aprobacion`, `aprobada` sin entregar o `fallida`).

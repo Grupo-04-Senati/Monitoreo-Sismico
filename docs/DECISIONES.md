@@ -438,3 +438,26 @@ solo se registran los puntos grises.
   sistema operativo (como el conector de ingesta) por equipos con inspección TLS.
 - **Descartado:** guardar el mundo en la base (separar Perú/mundo en todo el sistema) y
   consultar al USGS desde el navegador (la CSP solo permite la propia API).
+
+## D31. Avisos por SMS con consentimiento (Twilio)
+
+- **Decisión:** las reglas tienen un tercer canal, **SMS**, con los **roles** que lo reciben.
+  Al aprobarse un aviso se envía un SMS a cada usuario activo de esos roles que **registró
+  su celular en «Mi perfil», lo verificó con un código y dio su consentimiento**. El envío
+  usa Twilio (credenciales solo en el entorno: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
+  `TWILIO_FROM_NUMBER`); sin ellas la entrega queda **simulada**, como el correo.
+- **Datos personales (Ley 29733):** el número lo registra la propia persona con un texto
+  de consentimiento explícito; se verifica con un código de 6 dígitos (solo su hash, 10 min,
+  5 intentos, un envío por minuto); la baja borra número y consentimiento. Pantallas,
+  entregas y auditoría muestran el número enmascarado (+51 9•• ••• 321); la entrega guarda
+  `usuario:<id>`, no el número. En la demo sin Twilio el código se muestra en pantalla
+  (solo con `DEMO_SIMULACION=true`).
+- **Motivo:** las empresas avisan a su personal de turno por SMS porque llega sin datos
+  móviles; y permite que un rol sin acceso al Centro de alertas (p. ej. Solo lectura)
+  reciba el aviso aprobado. El SMS sale solo tras la revisión humana del aviso.
+- **Costo:** la cuenta de prueba de Twilio envía solo a números verificados en su panel
+  (hasta 5) con un prefijo de prueba; otros números quedan como entrega *fallida* con el
+  motivo ("número no verificado en la cuenta de prueba"). Cada SMS real tiene costo.
+- **Descartado:** WhatsApp (plantillas aprobadas por Meta, días de trámite), Telegram (no
+  usa el número de teléfono) y que un administrador cargue números ajenos (sin consentimiento).
+

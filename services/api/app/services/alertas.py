@@ -22,6 +22,7 @@ from app.schemas.alertas import ReglaIn
 from app.services.alertas_motor import entregar, evento_alerta
 from app.services.alertas_reglas import evaluar, marcadores, render
 from app.services.audit import registrar_auditoria
+from app.services.telefono import enmascarar
 
 #: Ejemplos que devuelve la simulación.
 EJEMPLOS_SIMULACION = 20
@@ -36,6 +37,7 @@ def _a_columnas(payload: ReglaIn) -> dict:
         "severity": payload.severidad,
         "channels": list(payload.canales),
         "recipients": [str(d) for d in payload.destinatarios],
+        "sms_roles": list(dict.fromkeys(payload.roles_sms)) if "sms" in payload.canales else [],
         "cooldown_seconds": payload.cooldown_minutos * 60,
         "requires_approval": payload.requiere_aprobacion,
         "max_event_age_hours": payload.antiguedad_max_horas,
@@ -79,7 +81,7 @@ async def editar_regla(
             status_code=status.HTTP_409_CONFLICT,
             detail="Desactive la regla antes de editarla; volverá a necesitar la activación de un Administrador.",
         )
-    antes = {"condition_json": regla.condition_json, "zone_spec": regla.zone_spec, "channels": regla.channels}
+    antes = {"condition_json": regla.condition_json, "zone_spec": regla.zone_spec, "channels": regla.channels, "sms_roles": regla.sms_roles}
     for campo, valor in _a_columnas(payload).items():
         setattr(regla, campo, valor)
     regla.approved_by = regla.approved_at = None
@@ -87,7 +89,7 @@ async def editar_regla(
     await db.refresh(regla)
     registrar_auditoria(
         actor_id=actor.id, action="regla_editada", entity_type="alert_rule", entity_id=regla.id,
-        before=antes, after={"condition_json": regla.condition_json, "zone_spec": regla.zone_spec, "channels": regla.channels},
+        before=antes, after={"condition_json": regla.condition_json, "zone_spec": regla.zone_spec, "channels": regla.channels, "sms_roles": regla.sms_roles},
         correlation_id=correlation_id,
     )
     return regla
@@ -186,6 +188,16 @@ async def entregas_de(db: AsyncSession, ids: list[str]) -> dict[str, list[AlertD
     if ids:
         for d in (await db.execute(select(AlertDelivery).where(AlertDelivery.alert_id.in_(ids)))).scalars():
             resultado[d.alert_id].append(d)
+    # SMS: el destino es "usuario:<id>"; se muestra el nombre y el número enmascarado actual.
+    sms = [d for ds in resultado.values() for d in ds if d.channel == "sms" and d.destination.startswith("usuario:")]
+    if sms:
+        uids = {d.destination.removeprefix("usuario:") for d in sms}
+        usuarios = {u.id: u for u in (await db.execute(select(User).where(User.id.in_(uids)))).scalars()}
+        for d in sms:
+            u = usuarios.get(d.destination.removeprefix("usuario:"))
+            d.destino_etiqueta = (
+                f"{u.full_name} ({enmascarar(u.phone_e164) or 'número dado de baja'})" if u else "usuario eliminado"
+            )
     return resultado
 
 

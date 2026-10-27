@@ -1,3 +1,4 @@
+import { ROLE_LABELS } from "@/types/auth";
 import { Link } from "react-router";
 import ExpandModal from "@/components/ui/ExpandModal";
 import { fmtDateTimeUTC5 } from "@/lib/format";
@@ -22,6 +23,7 @@ export default function DetalleReglaModal({ regla: r, esAdmin, cambiando, onActi
     ["Zona", resumenZona(r.zone_spec)],
     ["Canales", r.channels.map((c) => ETIQUETA_CANAL[c]).join(" + ")],
     ["Destinatarios de correo", r.recipients.length ? r.recipients.join(", ") : "—"],
+    ["SMS a los roles", r.sms_roles?.length ? r.sms_roles.map((x) => ROLE_LABELS[x]).join(", ") + " (con celular verificado)" : "—"],
     ["Espera entre avisos", fmtEspera(r.cooldown_seconds)],
     ["Antigüedad máxima del sismo", `${r.max_event_age_hours} h`],
     ["Aprobación de cada aviso", r.requires_approval ? "Sí, antes de enviar" : "No: se entrega al llegar el sismo"],

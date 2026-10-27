@@ -115,6 +115,23 @@ Siempre se distingue de los reales: su lugar empieza con `[SIMULADO]` y su fuent
 guion (*Mina Arequipa M4.5, 300 km*) y simular un M5.2 con 2 réplicas en Mina Arequipa →
 3 sismos y avisos en el Centro de alertas.
 
+### SMS al celular (opcional, Twilio)
+
+Sin configurar nada, el canal SMS funciona en **modo simulado**: el código de verificación
+aparece en pantalla y las entregas quedan *Simulada*. Para que el SMS llegue de verdad:
+
+1. Cuenta gratuita en twilio.com (plan *Limited trial*, sin tarjeta): obtener el número de
+   prueba y verificar en *Verified Caller IDs* los celulares que recibirán (hasta 5, +51…).
+   Si no llegan, marcar **Peru** en *Messaging → Settings → Geo permissions*.
+2. Render → `sismo-demo` → **Environment** → agregar `TWILIO_ACCOUNT_SID`,
+   `TWILIO_AUTH_TOKEN` (secreto) y `TWILIO_FROM_NUMBER` (+1…) → *Save, rebuild, and deploy*.
+3. Cada persona: **Mi perfil** (clic en su nombre, arriba a la derecha) → celular +
+   consentimiento → código por SMS → **Verificar**.
+4. Una regla con **SMS al celular** y los roles que lo reciben; al aprobar un aviso, llega
+   el SMS. Configuración → *Entorno del servidor* muestra si Twilio está configurado.
+
+Un número no verificado en la cuenta de prueba queda como entrega *Fallida* con el motivo.
+
 ## 5. Qué explicar
 
 **Uso empresarial.** Una minera, eléctrica o constructora con activos en zonas sísmicas

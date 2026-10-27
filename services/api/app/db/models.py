@@ -87,6 +87,17 @@ class User(Base):
 
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    #: Celular para avisos por SMS (D31), en formato E.164. Solo se usa si está verificado
+    #: y con consentimiento vigente; la baja borra el número y el consentimiento.
+    phone_e164: Mapped[str | None] = mapped_column(String(20))
+    phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sms_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Código de verificación pendiente (solo su hash), vencimiento, intentos y último envío.
+    phone_code_hash: Mapped[str | None] = mapped_column(String(128))
+    phone_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    phone_code_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    phone_code_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -693,6 +704,8 @@ class AlertRule(Base):
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     channels: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     recipients: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    #: Roles que reciben el SMS (D31): usuarios activos con celular verificado y consentimiento.
+    sms_roles: Mapped[list] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
     cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=3600)
     requires_approval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     #: Solo se avisa de eventos con menos de esta antigüedad (evita avisos por cargas históricas).
@@ -760,9 +773,10 @@ class AlertDelivery(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     alert_id: Mapped[str] = mapped_column(String(36), ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False)
-    #: "app" | "email"
+    #: "app" | "email" | "sms"
     channel: Mapped[str] = mapped_column(String(16), nullable=False)
-    #: "bandeja" para la app; correo del destinatario para email.
+    #: "bandeja" para la app; correo del destinatario para email; "usuario:<id>" para sms
+    #: (el número no se copia aquí: si el usuario se da de baja, no queda guardado).
     destination: Mapped[str] = mapped_column(String(255), nullable=False)
     #: "entregada" | "simulada" (canal desactivado: no se envió) | "fallida"
     status: Mapped[str] = mapped_column(String(16), nullable=False)

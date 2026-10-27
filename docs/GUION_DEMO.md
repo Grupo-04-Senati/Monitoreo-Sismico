@@ -109,6 +109,12 @@ para cambiar de usuario sin cerrar sesión.
 - **Aprobar y enviar** → entrega *Plataforma: Entregada* (y *Correo: Simulada* si la regla
   usa correo y el SMTP está desactivado). Luego **Dar acuse de recibo**. Cancelar otro con
   motivo. El Dashboard muestra los *avisos por atender*.
+- **SMS al celular (D31):** antes, como **demo-viewer** → *Mi perfil* (clic en el nombre)
+  → celular + consentimiento → código → **Verificar**. En la regla, marcar *SMS al celular*
+  con el rol *Solo lectura*. Al aprobar el aviso, la entrega *SMS* aparece con el nombre y
+  el número enmascarado, y llega al celular si Twilio está configurado (si no, *Simulada*).
+  Mensaje para el docente: "Solo lectura no entra al Centro de alertas, pero recibe el
+  aviso aprobado en su celular, porque dio su consentimiento".
 
 ### 9. Reportes (Analista) — 1 min
 - *Nuevo informe*: tipo *Eventos sísmicos*, formato *Excel (.xlsx)*, *Últimos 90 días* → **Generar informe** →
@@ -140,4 +146,4 @@ para cambiar de usuario sin cerrar sesión.
 
 - 414 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
   despliegue con HTTPS y simulacro de restauración verificados en cada cambio (CI).
-- Decisiones documentadas (D14–D30), manual técnico y checklist de aceptación en `docs/`.
+- Decisiones documentadas (D14–D31), manual técnico y checklist de aceptación en `docs/`.

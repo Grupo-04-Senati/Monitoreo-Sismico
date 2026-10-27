@@ -19,6 +19,7 @@ from app.routers import (
     eventos,
     dashboard,
     mapa,
+    perfil,
     analisis,
     datasets,
     ml,
@@ -95,6 +96,7 @@ app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["auth"])
 app.include_router(eventos.router, prefix=f"{API_PREFIX}/events", tags=["eventos"])
 app.include_router(dashboard.router, prefix=f"{API_PREFIX}/dashboard", tags=["dashboard"])
 app.include_router(mapa.router, prefix=f"{API_PREFIX}", tags=["mapa"])
+app.include_router(perfil.router, prefix=f"{API_PREFIX}/me", tags=["perfil"])
 app.include_router(analisis.router, prefix=f"{API_PREFIX}/analytics", tags=["analisis"])
 app.include_router(datasets.router, prefix=f"{API_PREFIX}/datasets", tags=["datasets"])
 app.include_router(ml.router, prefix=f"{API_PREFIX}/ml", tags=["ml"])

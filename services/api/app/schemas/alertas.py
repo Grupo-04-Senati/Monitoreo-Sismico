@@ -51,8 +51,10 @@ class ReglaIn(BaseModel):
     condicion: CondicionIn
     zona: ZonaIn = Field(default_factory=ZonaIn)
     severidad: Literal["informativa", "importante", "critica"] = "importante"
-    canales: list[Literal["app", "email"]] = Field(default_factory=lambda: ["app"], min_length=1)
+    canales: list[Literal["app", "email", "sms"]] = Field(default_factory=lambda: ["app"], min_length=1)
     destinatarios: list[EmailStr] = Field(default_factory=list, max_length=20)
+    #: Roles que reciben el SMS (D31): solo usuarios activos con celular verificado y consentimiento.
+    roles_sms: list[Literal["admin", "analyst", "alert_operator", "auditor", "viewer"]] = Field(default_factory=list)
     cooldown_minutos: int = Field(default=60, ge=0, le=10080)
     requiere_aprobacion: bool = True
     antiguedad_max_horas: int = Field(default=24, ge=1, le=720)
@@ -65,6 +67,8 @@ class ReglaIn(BaseModel):
             raise ValueError("los canales no pueden repetirse")
         if "email" in self.canales and not self.destinatarios:
             raise ValueError("el canal de correo necesita al menos un destinatario")
+        if "sms" in self.canales and not self.roles_sms:
+            raise ValueError("el canal SMS necesita al menos un rol destinatario")
         return self
 
 
@@ -79,6 +83,7 @@ class ReglaOut(BaseModel):
     severity: str
     channels: list[str]
     recipients: list[str]
+    sms_roles: list[str] = []
     cooldown_seconds: int
     requires_approval: bool
     max_event_age_hours: int
@@ -131,6 +136,8 @@ class EntregaOut(BaseModel):
     id: str
     channel: str
     destination: str
+    #: Para SMS: nombre y número enmascarado del destinatario (el número no se guarda en la entrega).
+    destino_etiqueta: str | None = None
     status: str
     attempts: int
     last_attempt_at: datetime | None

@@ -101,7 +101,8 @@ def test_sismo_simulado_recorre_ingesta_y_avisos(admin, monkeypatch):
     # El resumen público de la fuente nunca toma al simulador como fuente.
     assert meta["fuente"] is None or "ficticios" not in meta["fuente"]["nombre"]
     assert len(res["sismos"]) == 3 and res["sismos"][0]["magnitud"] == 5.4
-    assert all(s["region"] == "Arequipa" for s in res["sismos"])
+    # Caen al azar a menos de 40 km del centro de Arequipa: el radio toca Moquegua y Puno.
+    assert all(s["region"] in {"Arequipa", "Moquegua", "Puno"} for s in res["sismos"])
     assert len(res["avisos"]) == 3 and all(a["estado"] == "pendiente_aprobacion" for a in res["avisos"])
     assert eventos["total"] >= 3 and all(e["locality"].startswith("[SIMULADO]") for e in eventos["items"])
 

@@ -24,6 +24,7 @@ from app.services import login_throttle
 from app.services.audit import registrar_auditoria
 from app.services.auditoria_consulta import nombres
 from app.services.notifications import email as canal_email
+from app.services.notifications import sms as canal_sms
 
 #: Piso de retención que impone también el trigger de `audit_logs` (migración 0017).
 RETENCION_MINIMA_DIAS = 365
@@ -239,6 +240,8 @@ async def entorno(db: AsyncSession) -> dict[str, Any]:
             "servidor": settings.SMTP_HOST or None,
             "remitente": settings.SMTP_FROM or None,
         },
+        # Sin secretos: solo si Twilio está configurado y el número emisor (público).
+        "sms": {"configurado": canal_sms.configurado(), "emisor": settings.TWILIO_FROM_NUMBER or None},
         "acceso": {
             "intentos_antes_de_bloqueo": login_throttle.MAX_INTENTOS,
             "bloqueo_minutos": login_throttle.BLOQUEO_SEG // 60,

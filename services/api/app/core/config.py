@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
+    #: Avisos por SMS (D31). Solo se envía si están los tres; si no, la entrega queda "simulada".
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    #: Número emisor de Twilio en formato E.164 (p. ej. +15551234567).
+    TWILIO_FROM_NUMBER: str = ""
 
     @property
     def database_url(self) -> str:
