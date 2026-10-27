@@ -49,3 +49,11 @@ services:
       # Simulador de sismos ficticios (marcados [SIMULADO]) solo para esta demostración.
       - key: DEMO_SIMULACION
         value: "true"
+      # SMS de avisos (D31): se completan a mano en Render con los datos de Twilio.
+      # Vacíos, los SMS quedan "simulados". El Auth Token es secreto: nunca en el repo.
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false

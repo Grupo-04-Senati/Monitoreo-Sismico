@@ -24,6 +24,7 @@ import ReportesPage from "@/modules/reportes/ReportesPage";
 import UsuariosPage from "@/modules/usuarios-roles/UsuariosPage";
 import AuditoriaPage from "@/modules/auditoria/AuditoriaPage";
 import ConfiguracionPage from "@/modules/configuracion/ConfiguracionPage";
+import PerfilPage from "@/modules/perfil/PerfilPage";
 
 export default function App() {
   const [metaListo, setMetaListo] = useState(false);
@@ -59,6 +60,7 @@ export default function App() {
         <Route element={<RouteGuard permission="dashboard" />}>
           <Route element={<ErpLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
           </Route>
         </Route>
 

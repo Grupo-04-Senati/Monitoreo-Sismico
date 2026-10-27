@@ -189,7 +189,7 @@ export default function DetalleAvisoModal({ aviso: a, ocupado, onAccion, onCance
                   {a.entregas.map((d) => (
                     <tr key={d.id} className="border-t border-border">
                       <td className="px-2.5 py-1.5 text-content">{ETIQUETA_CANAL[d.channel]}</td>
-                      <td className="px-2.5 py-1.5 text-content-secondary">{d.destination}</td>
+                      <td className="px-2.5 py-1.5 text-content-secondary">{d.destino_etiqueta ?? d.destination}</td>
                       <td className={`px-2.5 py-1.5 ${d.status === "fallida" ? "font-semibold text-content" : "text-content-secondary"}`}>
                         {ETIQUETA_ENTREGA[d.status]}
                       </td>

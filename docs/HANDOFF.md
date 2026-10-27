@@ -117,6 +117,8 @@ npm run build
   Pendiente: mapa propio en el Dashboard (hoy remite al Mapa sísmico).
 - **Ingesta**: fuente USGS funcionando (D15) con correcciones de la fuente aplicadas e
   historial de revisiones (D27). Pendiente: el IGP como segunda fuente.
+- **Vista mundial (D30) y SMS con consentimiento (D31)**: Mapa sísmico Perú/Mundo; canal SMS
+  por Twilio (simulado sin credenciales), número en «Mi perfil». Ver DEMO_EN_LINEA.md.
 - **Demo en línea**: `render.yaml` + `infra/render/Dockerfile` (API sirve la web, simulador
   de sismos ficticios, modelo reconstruible; D28, D29). Guía en `docs/DEMO_EN_LINEA.md`.
 

@@ -1,4 +1,4 @@
-import type { Canal, Condicion, EstadoAviso, EstadoEntrega, Regla, ReglaIn, Severidad, TipoMagnitud, Zona } from "../types";
+import type { Canal, Condicion, EstadoAviso, EstadoEntrega, Regla, ReglaIn, RolSms, Severidad, TipoMagnitud, Zona } from "../types";
 
 /* Etiquetas, formatos y formulario de "Reglas de alertas" y "Centro de alertas".
    Colores NEUTROS: la severidad y el estado son datos operativos, no niveles de peligro
@@ -42,11 +42,11 @@ export const ESTADOS_AVISO: EstadoAviso[] = ["pendiente_aprobacion", "fallida", 
 
 export const ETIQUETA_ENTREGA: Record<EstadoEntrega, string> = {
   entregada: "Entregada",
-  simulada: "Simulada (correo desactivado)",
+  simulada: "Simulada (canal no configurado)",
   fallida: "Fallida",
 };
 
-export const ETIQUETA_CANAL: Record<Canal, string> = { app: "Plataforma", email: "Correo" };
+export const ETIQUETA_CANAL: Record<Canal, string> = { app: "Plataforma", email: "Correo", sms: "SMS" };
 
 export const TIPOS_MAGNITUD: TipoMagnitud[] = ["Mw", "ML", "mb"];
 
@@ -117,6 +117,8 @@ export interface FormRegla {
   app: boolean;
   email: boolean;
   destinatarios: string;
+  sms: boolean;
+  rolesSms: RolSms[];
   cooldown: string;
   requiereAprobacion: boolean;
   antiguedad: string;
@@ -142,6 +144,8 @@ export const FORM_VACIO: FormRegla = {
   app: true,
   email: false,
   destinatarios: "",
+  sms: false,
+  rolesSms: [],
   cooldown: "60",
   requiereAprobacion: true,
   antiguedad: "24",
@@ -171,6 +175,8 @@ export function formDesdeRegla(r: Regla): FormRegla {
     app: r.channels.includes("app"),
     email: r.channels.includes("email"),
     destinatarios: r.recipients.join(", "),
+    sms: r.channels.includes("sms"),
+    rolesSms: r.sms_roles ?? [],
     cooldown: String(Math.round(r.cooldown_seconds / 60)),
     requiereAprobacion: r.requires_approval,
     antiguedad: String(r.max_event_age_hours),
@@ -209,7 +215,8 @@ export function validarRegla(f: FormRegla): string | null {
     if (lon == null || Number.isNaN(lon) || lon < -180 || lon > 180) return "La longitud del centro va de −180 a 180.";
     if (radio == null || Number.isNaN(radio) || radio <= 0 || radio > 2000) return "El radio va de 1 a 2000 km.";
   }
-  if (!f.app && !f.email) return "Elige al menos un canal.";
+  if (!f.app && !f.email && !f.sms) return "Elige al menos un canal.";
+  if (f.sms && f.rolesSms.length === 0) return "El canal SMS necesita al menos un rol destinatario.";
   const destinos = listaDestinatarios(f.destinatarios);
   if (f.email && destinos.length === 0) return "El canal de correo necesita al menos un destinatario.";
   if (destinos.length > 20) return "Máximo 20 destinatarios.";
@@ -242,8 +249,9 @@ export function reglaDesdeForm(f: FormRegla): ReglaIn {
         ? { tipo: "circulo", nombre: f.zonaNombre.trim() || null, lat: n(f.lat), lon: n(f.lon), radio_km: n(f.radio) }
         : { tipo: "todo" },
     severidad: f.severidad,
-    canales: [...(f.app ? (["app"] as const) : []), ...(f.email ? (["email"] as const) : [])],
+    canales: [...(f.app ? (["app"] as const) : []), ...(f.email ? (["email"] as const) : []), ...(f.sms ? (["sms"] as const) : [])],
     destinatarios: listaDestinatarios(f.destinatarios),
+    roles_sms: f.sms ? f.rolesSms : [],
     cooldown_minutos: n(f.cooldown) ?? 60,
     requiere_aprobacion: f.requiereAprobacion,
     antiguedad_max_horas: n(f.antiguedad) ?? 24,

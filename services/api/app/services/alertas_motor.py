@@ -7,6 +7,8 @@
 - Cooldown: si la regla ya avisó de un evento ocurrido hace menos de su cooldown,
   el nuevo aviso se registra como "suprimido" (queda la traza, no se entrega).
 - Con aprobación humana el aviso queda "pendiente_aprobacion"; sin ella se entrega.
+- Canal SMS (D31): un SMS por usuario activo de los roles de la regla con celular
+  verificado y consentimiento vigente; sin Twilio configurado la entrega es "simulada".
 """
 
 from __future__ import annotations
@@ -14,17 +16,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import now as clock_now
-from app.db.models import Alert, AlertDelivery, AlertRule, AlertStatus, SeismicEvent
+from app.db.models import Alert, AlertDelivery, AlertRule, AlertStatus, Role, SeismicEvent, User, UserStatus
 from app.services.alertas_reglas import EventoAlerta, es_reciente, evaluar, marcadores, render
 from app.services.audit import registrar_auditoria
 from app.services.notifications import email as canal_email
+from app.services.notifications import sms as canal_sms
 
 logger = logging.getLogger("sismo.alertas")
 
@@ -55,6 +58,30 @@ async def _ultimo_evento_avisado(db: AsyncSession, regla_id: str) -> datetime | 
     )
 
 
+async def destinatarios_sms(db: AsyncSession, roles: list[str]) -> list[User]:
+    """Usuarios activos de esos roles con celular verificado y consentimiento vigente."""
+    if not roles:
+        return []
+    consulta = select(User).where(
+        User.status == UserStatus.ACTIVE,
+        User.phone_e164.is_not(None),
+        User.phone_verified_at.is_not(None),
+        User.sms_consent_at.is_not(None),
+        User.roles.any(Role.name.in_(roles)),
+    )
+    return list((await db.execute(consulta)).scalars())
+
+
+async def texto_sms(db: AsyncSession, alerta: Alert) -> str:
+    """Texto corto (un SMS): qué, dónde, cuándo y que no es una alerta oficial."""
+    evento = await db.get(SeismicEvent, alerta.event_id)
+    cuando = ""
+    if evento is not None:
+        cuando = evento.occurred_at.astimezone(timezone(timedelta(hours=-5))).strftime(" %d/%m %H:%M")
+    distancia = f", a {alerta.distance_km:.0f} km" if alerta.distance_km is not None else ""
+    return f"[Sismora] Aviso interno: {alerta.title}{distancia},{cuando} (UTC-5). No es alerta oficial: IGP/INDECI."[:320]
+
+
 async def entregar(db: AsyncSession, alerta: Alert, regla: AlertRule) -> None:
     """Crea o reintenta las entregas pendientes del aviso y fija su estado final."""
     destinos: list[tuple[str, str]] = []
@@ -62,6 +89,12 @@ async def entregar(db: AsyncSession, alerta: Alert, regla: AlertRule) -> None:
         destinos.append(("app", "bandeja"))
     if "email" in regla.channels:
         destinos += [("email", d) for d in regla.recipients]
+    telefonos: dict[str, str] = {}
+    if "sms" in regla.channels:
+        for u in await destinatarios_sms(db, list(regla.sms_roles or [])):
+            destinos.append(("sms", f"usuario:{u.id}"))
+            telefonos[f"usuario:{u.id}"] = u.phone_e164 or ""
+    cuerpo_sms = await texto_sms(db, alerta) if telefonos else ""
 
     existentes = {
         (d.channel, d.destination): d
@@ -79,6 +112,17 @@ async def entregar(db: AsyncSession, alerta: Alert, regla: AlertRule) -> None:
         entrega.last_attempt_at = ahora
         if canal == "app":
             entrega.status, entrega.delivered_at, entrega.error = "entregada", ahora, None
+            continue
+        if canal == "sms":
+            try:
+                await asyncio.to_thread(canal_sms.enviar, telefonos[destino], cuerpo_sms)
+                entrega.status, entrega.delivered_at, entrega.error = "entregada", ahora, None
+            except canal_sms.SmsDesactivado as exc:
+                entrega.status, entrega.error = "simulada", str(exc)[:300]
+            except canal_sms.SmsFallido as exc:
+                entrega.status, entrega.error = "fallida", str(exc)[:300]
+            except Exception as exc:  # noqa: BLE001 - se registra y se puede reintentar
+                entrega.status, entrega.error = "fallida", f"{type(exc).__name__}"[:300]
             continue
         try:
             await asyncio.to_thread(canal_email.enviar, destino, alerta.title, alerta.message)

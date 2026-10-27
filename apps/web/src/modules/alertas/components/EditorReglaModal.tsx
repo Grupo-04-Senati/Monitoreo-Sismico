@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import ExpandModal from "@/components/ui/ExpandModal";
-import type { Regla, ReglaIn, Severidad, TipoMagnitud } from "../types";
+import type { Regla, ReglaIn, RolSms, Severidad, TipoMagnitud } from "../types";
+import { ROLE_LABELS } from "@/types/auth";
 import {
   ETIQUETA_SEVERIDAD,
   FORM_VACIO,
@@ -195,7 +196,31 @@ export default function EditorReglaModal({ regla, guardando, errorApi, onGuardar
               <input type="checkbox" checked={f.email} onChange={(e) => set({ email: e.target.checked })} />
               Correo electrónico
             </label>
+            <label className="flex items-center gap-2 text-xs text-content">
+              <input type="checkbox" checked={f.sms} onChange={(e) => set({ sms: e.target.checked })} />
+              SMS al celular
+            </label>
           </div>
+          <Campo
+            etiqueta="Roles que reciben el SMS"
+            ayuda="Solo llega a usuarios activos de esos roles que registraron y verificaron su celular en «Mi perfil» y dieron su consentimiento. Sale al aprobar el aviso."
+          >
+            <div className={`flex flex-wrap gap-x-3 gap-y-1.5 ${f.sms ? "" : "opacity-50"}`}>
+              {(Object.keys(ROLE_LABELS) as RolSms[]).map((rol) => (
+                <label key={rol} className="flex items-center gap-1.5 text-xs text-content">
+                  <input
+                    type="checkbox"
+                    disabled={!f.sms}
+                    checked={f.rolesSms.includes(rol)}
+                    onChange={(e) =>
+                      set({ rolesSms: e.target.checked ? [...f.rolesSms, rol] : f.rolesSms.filter((x) => x !== rol) })
+                    }
+                  />
+                  {ROLE_LABELS[rol]}
+                </label>
+              ))}
+            </div>
+          </Campo>
           <Campo etiqueta="Destinatarios de correo" ayuda="Separados por coma. Si el SMTP está desactivado, la entrega queda “simulada”.">
             <textarea
               value={f.destinatarios}

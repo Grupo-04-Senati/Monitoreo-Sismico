@@ -2,7 +2,9 @@
    `/api/v1/alert-rules` y `/api/v1/alerts` (ver `services/api/app/schemas/alertas.py`). */
 
 export type Severidad = "informativa" | "importante" | "critica";
-export type Canal = "app" | "email";
+export type Canal = "app" | "email" | "sms";
+/** Roles que pueden recibir el SMS de una regla (D31). */
+export type RolSms = "admin" | "analyst" | "alert_operator" | "auditor" | "viewer";
 export type TipoMagnitud = "Mw" | "ML" | "mb";
 export type EstadoAviso = "pendiente_aprobacion" | "aprobada" | "enviada" | "fallida" | "cancelada" | "suprimida";
 export type EstadoEntrega = "entregada" | "simulada" | "fallida";
@@ -32,6 +34,7 @@ export interface ReglaIn {
   severidad: Severidad;
   canales: Canal[];
   destinatarios: string[];
+  roles_sms: RolSms[];
   cooldown_minutos: number;
   requiere_aprobacion: boolean;
   antiguedad_max_horas: number;
@@ -49,6 +52,7 @@ export interface Regla {
   severity: Severidad;
   channels: Canal[];
   recipients: string[];
+  sms_roles?: RolSms[];
   cooldown_seconds: number;
   requires_approval: boolean;
   max_event_age_hours: number;
@@ -89,6 +93,8 @@ export interface Entrega {
   id: string;
   channel: Canal;
   destination: string;
+  /** SMS: nombre y número enmascarado del destinatario. */
+  destino_etiqueta?: string | null;
   status: EstadoEntrega;
   attempts: number;
   last_attempt_at: string | null;

@@ -63,7 +63,7 @@ test("el Operador aprueba un aviso y consulta su entrega", async ({ page }) => {
   await detalle.getByRole("button", { name: "Aprobar y enviar" }).click();
   await expect(detalle.getByText("Enviada").first()).toBeVisible();
   await expect(detalle.getByText("Entregada")).toBeVisible();
-  await expect(detalle.getByText("Simulada (correo desactivado)").or(detalle.getByText("Plataforma"))).toBeVisible();
+  await expect(detalle.getByText("Simulada (canal no configurado)").or(detalle.getByText("Plataforma"))).toBeVisible();
 });
 
 test("la creación y la activación quedan en la Auditoría", async ({ page }) => {

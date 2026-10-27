@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { useAuth } from "@/app/auth/AuthContext";
 import { ROLE_LABELS } from "@/types/auth";
 import type { EstadoConector } from "@/types";
@@ -77,15 +78,15 @@ export default function Topbar() {
 
         {user && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2.5">
+            <Link to="/perfil" title="Mi perfil" className="flex items-center gap-2.5 rounded-md px-1 py-0.5 transition-colors hover:bg-surface-tertiary">
               <div className="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-semibold">
                 {initials}
               </div>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-content leading-tight">{user.fullName}</p>
-                <p className="text-[11px] text-content-muted">{ROLE_LABELS[user.role]}</p>
+                <p className="text-[11px] text-content-muted">{ROLE_LABELS[user.role]} · Mi perfil</p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md hover:bg-surface-tertiary transition-colors text-content-secondary"
