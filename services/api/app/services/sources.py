@@ -82,6 +82,7 @@ def serializar_run(run: IngestionRun) -> RunOut:
         http_status=run.http_status,
         records_read=run.records_read,
         records_inserted=run.records_inserted,
+        records_updated=run.records_updated or 0,
         duplicates_skipped=run.duplicates_skipped,
         attempts=run.attempts,
         error_summary=run.error_summary,
@@ -122,6 +123,7 @@ def calcular_resumen(runs: list[IngestionRun]) -> SummaryOut:
         else 0
     )
     insertados = sum(r.records_inserted for r in runs)
+    corregidos = sum(r.records_updated or 0 for r in runs)
     duplicados = sum(r.duplicates_skipped for r in runs)
 
     recientes = finalizadas[:8]
@@ -153,6 +155,7 @@ def calcular_resumen(runs: list[IngestionRun]) -> SummaryOut:
         latencia_media_ms=latencia,
         tasa_exito_pct=tasa,
         registros_insertados=insertados,
+        registros_corregidos=corregidos,
         duplicados_omitidos=duplicados,
     )
 

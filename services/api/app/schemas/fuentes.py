@@ -53,6 +53,8 @@ class SummaryOut(BaseModel):
     latencia_media_ms: int
     tasa_exito_pct: float
     registros_insertados: int
+    #: Sismos ya guardados que la fuente corrigió y se actualizaron con historial (D27).
+    registros_corregidos: int = 0
     duplicados_omitidos: int
 
 

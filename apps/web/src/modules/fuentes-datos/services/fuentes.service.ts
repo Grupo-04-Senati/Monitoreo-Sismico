@@ -42,6 +42,7 @@ interface RunAPI {
   http_status: number | null;
   records_read: number;
   records_inserted: number;
+  records_updated?: number;
   duplicates_skipped: number;
   attempts: number;
   error_summary: string | null;
@@ -81,6 +82,7 @@ interface SummaryAPI {
   latencia_media_ms: number;
   tasa_exito_pct: number;
   registros_insertados: number;
+  registros_corregidos?: number;
   duplicados_omitidos: number;
 }
 
@@ -126,6 +128,7 @@ function adaptarEjecucion(r: RunAPI): EjecucionFuente {
     estado: r.status as EjecucionFuente["estado"],
     leidos: r.records_read,
     insertados: r.records_inserted,
+    corregidos: r.records_updated ?? 0,
     duplicadosOmitidos: r.duplicates_skipped,
     errorResumen: r.error_summary,
     desencadenante: r.triggered_by === "manual" ? "manual" : "programada",
@@ -153,6 +156,7 @@ function adaptarResumen(s: SummaryAPI): ResumenFuente {
     latenciaMediaMs: s.latencia_media_ms,
     tasaExitoPct: s.tasa_exito_pct,
     registrosInsertados: s.registros_insertados,
+    registrosCorregidos: s.registros_corregidos ?? 0,
     duplicadosOmitidos: s.duplicados_omitidos,
   };
 }
@@ -373,6 +377,7 @@ export interface ResultadoSincronizacion {
   id: string;
   inicioUtc: string;
   insertados: number;
+  corregidos: number;
   duplicadosOmitidos: number;
 }
 
@@ -396,11 +401,12 @@ export async function sincronizarAhora(): Promise<ResultadoSincronizacion> {
         id: run.id,
         inicioUtc: run.started_at,
         insertados: run.records_inserted,
+        corregidos: run.records_updated ?? 0,
         duplicadosOmitidos: run.duplicates_skipped,
       };
     }
   }
-  return { id: runId, inicioUtc: new Date().toISOString(), insertados: 0, duplicadosOmitidos: 0 };
+  return { id: runId, inicioUtc: new Date().toISOString(), insertados: 0, corregidos: 0, duplicadosOmitidos: 0 };
 }
 
 /* ════ Resumen por hora (series de la vista ampliada) ════ */
@@ -414,6 +420,7 @@ export interface HoraResumen {
   pctExito: number;
   latenciaMedia: number;
   insertados: number;
+  corregidos: number;
   duplicados: number;
 }
 
@@ -445,6 +452,7 @@ export function resumenPorHora(ventana: EjecucionFuente[]): HoraResumen[] {
       pctExito: finalizadas.length ? Math.round(((correctas + conErrores) / finalizadas.length) * 1000) / 10 : 0,
       latenciaMedia: conLatencia.length ? Math.round(conLatencia.reduce((s, e) => s + e.latenciaMs, 0) / conLatencia.length) : 0,
       insertados: lista.reduce((s, e) => s + e.insertados, 0),
+      corregidos: lista.reduce((s, e) => s + e.corregidos, 0),
       duplicados: lista.reduce((s, e) => s + e.duplicadosOmitidos, 0),
     });
   }
@@ -518,6 +526,7 @@ export function construirBloque(id: ParteExportId, ctx: ContextoExport): Bloque 
           ["Latencia media (ms)", r.latenciaMediaMs],
           ["Tasa de éxito (%)", Math.round(r.tasaExitoPct * 10) / 10],
           ["Registros insertados", r.registrosInsertados],
+          ["Registros corregidos por la fuente", r.registrosCorregidos],
           ["Duplicados omitidos", r.duplicadosOmitidos],
         ],
       };
@@ -561,7 +570,7 @@ export function construirBloque(id: ParteExportId, ctx: ContextoExport): Bloque 
     }
     case "ejecuciones":
       return {
-        cols: ["ejecucion", "inicio_utc5", "duracion_ms", "latencia_ms", "estado", "leidos", "insertados", "duplicados_omitidos", "desencadenante", "http", "error"],
+        cols: ["ejecucion", "inicio_utc5", "duracion_ms", "latencia_ms", "estado", "leidos", "insertados", "corregidos", "duplicados_omitidos", "desencadenante", "http", "error"],
         rows: ctx.ventana.map((e) => [
           e.id,
           fmtDateTimeUTC5(e.inicioUtc),
@@ -570,6 +579,7 @@ export function construirBloque(id: ParteExportId, ctx: ContextoExport): Bloque 
           ETIQUETA_EJECUCION[e.estado],
           e.leidos,
           e.insertados,
+          e.corregidos,
           e.duplicadosOmitidos,
           e.desencadenante,
           e.httpStatus,
@@ -578,7 +588,7 @@ export function construirBloque(id: ParteExportId, ctx: ContextoExport): Bloque 
       };
     case "hora":
       return {
-        cols: ["hora_utc5", "ejecuciones", "correctas", "con_errores", "fallidas", "tasa_exito_pct", "latencia_media_ms", "insertados", "duplicados"],
+        cols: ["hora_utc5", "ejecuciones", "correctas", "con_errores", "fallidas", "tasa_exito_pct", "latencia_media_ms", "insertados", "corregidos", "duplicados"],
         rows: resumenPorHora(ctx.ventana).map((h) => [
           h.hora,
           h.ejecuciones,
@@ -588,6 +598,7 @@ export function construirBloque(id: ParteExportId, ctx: ContextoExport): Bloque 
           h.pctExito,
           h.latenciaMedia,
           h.insertados,
+          h.corregidos,
           h.duplicados,
         ]),
       };

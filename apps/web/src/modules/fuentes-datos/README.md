@@ -75,7 +75,7 @@ modules/fuentes-datos/
   validar; las credenciales solo se referencian (nunca en texto plano) y la
   ingesta es idempotente.
 - **KPIs**: estado del conector (con punto de color), último éxito, latencia
-  media, tasa de éxito, registros insertados y duplicados omitidos. Cada tarjeta
+  media, tasa de éxito, registros insertados (con los corregidos por la fuente) y duplicados omitidos. Cada tarjeta
   incluye una **mini-serie (sparkline)** con la tendencia horaria de su métrica.
 - **Gráfico por indicador**: cada KPI se representa con el tipo de gráfico que
   mejor lo describe (`kpis.ts`, campo `grafico`): **barras horizontales** para la
