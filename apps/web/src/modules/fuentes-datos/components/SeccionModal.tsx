@@ -227,7 +227,7 @@ export default function SeccionModal({
   const registro = datos?.registro ?? [];
   const horaResumen = useMemo(() => resumenPorHora(ventana), [ventana]);
   const meta = {
-    resumen: resumen ?? { estadoConector: "operativo" as const, estadoConectorDetalle: "", ultimoExitoUtc: "", latenciaMediaMs: 0, tasaExitoPct: 0, registrosInsertados: 0, duplicadosOmitidos: 0 },
+    resumen: resumen ?? { estadoConector: "operativo" as const, estadoConectorDetalle: "", ultimoExitoUtc: "", latenciaMediaMs: 0, tasaExitoPct: 0, registrosInsertados: 0, registrosCorregidos: 0, duplicadosOmitidos: 0 },
     ficha: ficha ?? { nombre: "", organizacion: "", tipo: "", urlApi: "", frecuencia: "", ultimaEjecucionUtc: "", ultimoExitoUtc: "", latenciaMs: 0, limitesUso: null, licencia: null, contacto: null, credencialRef: "" },
     calidad,
     configuracion: configuracion ?? { frecuenciaMin: 0, urlApi: "", licencia: "", contacto: "", limitesUso: "", reintentos: 0, timeoutSeg: 0, ingestaIdempotente: true, notificarErrores: true },
@@ -352,6 +352,7 @@ export default function SeccionModal({
       { key: "pctExito", label: "Tasa éxito" },
       { key: "latenciaMedia", label: "Latencia media" },
       { key: "insertados", label: "Insertados" },
+      { key: "corregidos", label: "Corregidos" },
       { key: "duplicados", label: "Duplicados" },
     ];
     contenido = (
@@ -370,7 +371,7 @@ export default function SeccionModal({
           {seccion === "kpi-1" && resumen && <Dato etiqueta="Fecha (UTC-5)" valor={fmtDateUTC5(resumen.ultimoExitoUtc)} detalle={detalleUltimoExito(resumen)} />}
           {seccion === "kpi-3" && <Dato etiqueta="Ejecuciones finalizadas" valor={String(ventana.filter((e) => e.estado !== "en_curso").length)} detalle="Con los filtros actuales" />}
           {seccion === "kpi-4" && resumen && <Dato etiqueta="Duplicados omitidos" valor={resumen.duplicadosOmitidos.toLocaleString("es-PE")} detalle="Ingesta idempotente" />}
-          {seccion === "kpi-5" && resumen && <Dato etiqueta="Registros insertados" valor={resumen.registrosInsertados.toLocaleString("es-PE")} detalle="Tras deduplicar" />}
+          {seccion === "kpi-5" && resumen && <Dato etiqueta="Registros insertados" valor={resumen.registrosInsertados.toLocaleString("es-PE")} detalle={`Tras deduplicar · ${resumen.registrosCorregidos.toLocaleString("es-PE")} corregidos por la fuente`} />}
         </div>
 
         <div className="mt-4 rounded-lg border border-border border-l-2 border-l-accent-600 bg-surface px-3.5 py-2.5">
@@ -453,7 +454,7 @@ export default function SeccionModal({
       label: fmtTimeUTC5(e.inicioUtc),
       value: e.latenciaMs,
       estado: e.estado,
-      tip: [`${fmtTimeUTC5(e.inicioUtc)} · ${ETIQUETA_EJECUCION[e.estado]}`, `${e.latenciaMs} ms`, `${e.insertados} insertados`],
+      tip: [`${fmtTimeUTC5(e.inicioUtc)} · ${ETIQUETA_EJECUCION[e.estado]}`, `${e.latenciaMs} ms`, `${e.insertados} insertados`, `${e.corregidos} corregidos`],
     }));
     const st = estadisticasLatencia(ventana);
     contenido = (
@@ -488,6 +489,7 @@ export default function SeccionModal({
       { key: "estado", label: "Estado" },
       { key: "leidos", label: "Leídos" },
       { key: "insertados", label: "Insertados" },
+      { key: "corregidos", label: "Corregidos" },
       { key: "duplicados", label: "Duplicados" },
       { key: "error", label: "Error" },
     ];
@@ -498,6 +500,7 @@ export default function SeccionModal({
       estado: <StatusBadge status={e.estado} label={ETIQUETA_EJECUCION[e.estado]} colorClass={COLOR_EJECUCION[e.estado]} />,
       leidos: e.leidos,
       insertados: <b className="font-semibold">{e.insertados}</b>,
+      corregidos: e.corregidos,
       duplicados: e.duplicadosOmitidos,
       error: e.errorResumen ? <span className="line-clamp-1 text-content-secondary" title={e.errorResumen}>{e.errorResumen}</span> : <span className="text-content-muted">—</span>,
     }));

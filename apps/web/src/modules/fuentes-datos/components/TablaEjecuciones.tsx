@@ -53,7 +53,7 @@ export default function TablaEjecuciones({
     label: fmtTimeUTC5(e.inicioUtc),
     value: e.latenciaMs,
     estado: e.estado,
-    tip: [`${fmtTimeUTC5(e.inicioUtc)} · ${ETIQUETA_EJECUCION[e.estado]}`, `${e.latenciaMs} ms`, `${e.insertados} insertados`],
+    tip: [`${fmtTimeUTC5(e.inicioUtc)} · ${ETIQUETA_EJECUCION[e.estado]}`, `${e.latenciaMs} ms`, `${e.insertados} insertados`, `${e.corregidos} corregidos`],
   }));
 
   const columnas = [
@@ -63,6 +63,7 @@ export default function TablaEjecuciones({
     { key: "estado", label: "Estado" },
     { key: "leidos", label: "Leídos" },
     { key: "insertados", label: "Insertados" },
+    { key: "corregidos", label: "Corregidos" },
     { key: "duplicados", label: "Duplicados omitidos" },
     { key: "error", label: "Error (resumen)" },
   ];
@@ -74,6 +75,7 @@ export default function TablaEjecuciones({
     estado: <StatusBadge status={e.estado} label={ETIQUETA_EJECUCION[e.estado]} colorClass={COLOR_EJECUCION[e.estado]} />,
     leidos: e.leidos,
     insertados: <b className="font-semibold">{e.insertados}</b>,
+    corregidos: e.corregidos,
     duplicados: e.duplicadosOmitidos,
     error: e.errorResumen ? (
       <span className="line-clamp-1 text-content-secondary" title={e.errorResumen}>

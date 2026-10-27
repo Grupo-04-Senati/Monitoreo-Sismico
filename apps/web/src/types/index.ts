@@ -189,6 +189,8 @@ export interface EjecucionFuente {
   estado: EstadoEjecucion;
   leidos: number;
   insertados: number;
+  /** Sismos ya guardados que la fuente corrigió y se actualizaron con historial (D27). */
+  corregidos: number;
   duplicadosOmitidos: number;
   errorResumen: string | null;
   desencadenante: "programada" | "manual";
@@ -242,6 +244,7 @@ export interface ResumenFuente {
   latenciaMediaMs: number;
   tasaExitoPct: number;
   registrosInsertados: number;
+  registrosCorregidos: number;
   duplicadosOmitidos: number;
 }
 

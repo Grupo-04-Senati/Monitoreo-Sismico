@@ -72,6 +72,7 @@ export default function TarjetasFuente({
     if (!resumen) return "—";
     if (i === 0) return resumen.estadoConectorDetalle;
     if (i === 1) return detalleUltimoExito(resumen);
+    if (KPIS[i].metrica === "insertados") return `${KPIS[i].detalle} · ${resumen.registrosCorregidos.toLocaleString("es-PE")} corregidos`;
     return KPIS[i].detalle;
   };
 

@@ -75,7 +75,7 @@ export const KPIS: KpiDef[] = [
   {
     etiqueta: "Registros insertados",
     descripcion: "Eventos nuevos efectivamente cargados.",
-    calculo: "Suma de registros insertados en todas las ejecuciones de la ventana, tras deduplicar.",
+    calculo: "Suma de registros insertados en todas las ejecuciones de la ventana, tras deduplicar. Debajo, los sismos ya guardados que la fuente corrigió y se actualizaron guardando la versión anterior.",
     detalle: "Últimas 12 h",
     valor: (r) => r.registrosInsertados.toLocaleString("es-PE"),
     metrica: "insertados",

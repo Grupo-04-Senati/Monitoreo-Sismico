@@ -77,7 +77,8 @@ export default function ModalSincronizar({ onCerrar, onSincronizar }: ModalSincr
               Ejecución: <code className="font-mono text-[11px] text-content">{resultado.id}</code>
             </li>
             <li>
-              Insertados: <b className="font-semibold text-content">{resultado.insertados}</b> · Duplicados omitidos:{" "}
+              Insertados: <b className="font-semibold text-content">{resultado.insertados}</b> · Corregidos:{" "}
+              <b className="font-semibold text-content">{resultado.corregidos}</b> · Duplicados omitidos:{" "}
               <b className="font-semibold text-content">{resultado.duplicadosOmitidos}</b>
             </li>
           </ul>

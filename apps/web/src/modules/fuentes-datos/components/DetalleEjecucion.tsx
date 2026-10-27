@@ -75,6 +75,7 @@ export default function DetalleEjecucion({
         <TarjetaDato etiqueta="Duración" valor={ejecucion.estado === "en_curso" ? "En curso" : `${ejecucion.duracionMs} ms`} detalle={`Latencia: ${ejecucion.latenciaMs} ms`} />
         <TarjetaDato etiqueta="Leídos" valor={String(ejecucion.leidos)} detalle="Registros recibidos de la fuente" />
         <TarjetaDato etiqueta="Insertados" valor={String(ejecucion.insertados)} detalle="Nuevos tras deduplicar" />
+        <TarjetaDato etiqueta="Corregidos" valor={String(ejecucion.corregidos)} detalle="Ya guardados, actualizados por la fuente (con historial)" />
         <TarjetaDato etiqueta="Duplicados omitidos" valor={String(ejecucion.duplicadosOmitidos)} detalle="Ya presentes (hash de origen)" />
       </div>
 

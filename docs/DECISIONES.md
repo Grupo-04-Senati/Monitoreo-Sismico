@@ -375,8 +375,9 @@ solo se registran los puntos grises.
   de ocurrir (uno de Huacho, del 25-09, corregido el 15-10).
 - **Costo:** una corrección de un evento de hace más de 60 días no se recoge (habría que
   pedir más historial en cada sincronización). Si la sincronización se detuvo más de 60
-  días, la siguiente vuelve al modo por fecha de ocurrencia. La pantalla de Fuentes de
-  datos aún no muestra el contador de corregidos (la API ya lo entrega).
+  días, la siguiente vuelve al modo por fecha de ocurrencia. Fuentes de datos muestra los
+  corregidos por ejecución (tabla, detalle, resumen por hora, exportación y resultado de la
+  sincronización manual) y su total en la tarjeta de registros.
 - **Descartado:** sobrescribir sin historial (rompe datasets y modelos congelados, D16 y
   D17) y copiar todos los valores en cada dataset (duplica el catálogo).
 
