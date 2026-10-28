@@ -7,8 +7,12 @@ Reglas (Ley 29733 de protección de datos personales):
 - Solo un número verificado y con consentimiento vigente recibe avisos.
 - La baja borra el número y el consentimiento. La auditoría guarda el número enmascarado.
 
-Sin Twilio configurado, en la demo (`DEMO_SIMULACION=true`) el código se devuelve en la
-respuesta para poder completar el flujo; en producción nunca.
+El código se devuelve en la respuesta solo en dos casos de demostración:
+- sin Twilio configurado y con `DEMO_SIMULACION=true` (el SMS se simula);
+- con la cuenta de prueba de Twilio (`TWILIO_CUENTA_PRUEBA=true`): llega un SMS real, pero con
+  la plantilla fija de Twilio, sin el código. Esa cuenta solo envía a números verificados en
+  Twilio por su dueño, así que la titularidad del celular ya está comprobada allí.
+En producción (Twilio de pago) nunca.
 """
 
 from __future__ import annotations
@@ -70,6 +74,7 @@ def estado(user: User) -> dict:
         "consentimiento_at": user.sms_consent_at,
         "codigo_pendiente": user.phone_code_hash is not None and user.phone_verified_at is None,
         "sms_configurado": sms.configurado(),
+        "sms_cuenta_prueba": sms.cuenta_prueba(),
     }
 
 
@@ -86,7 +91,9 @@ async def registrar(db, user: User, crudo: str, *, correlation_id: str | None) -
 
     simulado, error = False, None
     try:
-        await asyncio.to_thread(sms.enviar, numero, f"Sismora: su código de verificación es {codigo}. Vence en 10 minutos.")
+        await asyncio.to_thread(
+            sms.enviar, numero, f"Sismora: su código de verificación es {codigo}. Vence en 10 minutos.", sms.PLANTILLA_CODIGO
+        )
     except sms.SmsDesactivado:
         simulado = True
     except sms.SmsFallido as exc:
@@ -94,14 +101,17 @@ async def registrar(db, user: User, crudo: str, *, correlation_id: str | None) -
     await db.commit()
     registrar_auditoria(
         actor_id=user.id, action="telefono_registrado", entity_type="user", entity_id=user.id,
-        after={"telefono": enmascarar(numero), "consentimiento": True, "codigo": "simulado" if simulado else ("fallido" if error else "enviado")},
+        after={
+            "telefono": enmascarar(numero), "consentimiento": True,
+            "codigo": "simulado" if simulado else ("fallido" if error else ("plantilla de prueba" if sms.cuenta_prueba() else "enviado")),
+        },
         correlation_id=correlation_id,
     )
     if error:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"No se pudo enviar el código: {error}.")
     respuesta = {**estado(user), "simulado": simulado}
-    if simulado and settings.DEMO_SIMULACION:
-        respuesta["codigo_demo"] = codigo  # solo demo sin Twilio: permite completar el flujo
+    if (simulado and settings.DEMO_SIMULACION) or (not simulado and sms.cuenta_prueba()):
+        respuesta["codigo_demo"] = codigo  # solo demostración: el SMS no lleva el código
     return respuesta
 
 

@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     #: Número emisor de Twilio en formato E.164 (p. ej. +15551234567).
     TWILIO_FROM_NUMBER: str = ""
+    #: Cuenta de prueba (trial) de Twilio: solo acepta sus plantillas fijas, no texto propio.
+    #: Con true se envía la plantilla de Twilio y el código de verificación se muestra en pantalla.
+    TWILIO_CUENTA_PRUEBA: bool = False
 
     @property
     def database_url(self) -> str:

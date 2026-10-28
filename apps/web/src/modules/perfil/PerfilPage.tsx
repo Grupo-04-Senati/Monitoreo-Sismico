@@ -13,8 +13,10 @@ interface EstadoTelefono {
   consentimiento_at: string | null;
   codigo_pendiente: boolean;
   sms_configurado: boolean;
+  /** Cuenta de prueba de Twilio: llega su plantilla fija, sin el código ni el texto del aviso. */
+  sms_cuenta_prueba?: boolean;
   simulado?: boolean;
-  /** Solo en la demo sin Twilio: el código, para poder completar el flujo. */
+  /** Solo en demostración (sin Twilio, o con la cuenta de prueba): el código, para completar el flujo. */
   codigo_demo?: string;
 }
 
@@ -69,7 +71,12 @@ export default function PerfilPage() {
   const enviarCodigo = () =>
     accion(
       () => apiPost<EstadoTelefono>("/me/telefono", { telefono: numero, consentimiento: true }),
-      (r) => (r.simulado ? "Modo demostración: el SMS con el código se simuló (no salió al celular)." : "Le enviamos un código de 6 dígitos por SMS."),
+      (r) =>
+        r.simulado
+          ? "Modo demostración: el SMS con el código se simuló (no salió al celular)."
+          : r.sms_cuenta_prueba
+            ? "Le enviamos un SMS de prueba de Twilio. Esa cuenta no permite incluir el código: está abajo."
+            : "Le enviamos un código de 6 dígitos por SMS.",
     );
   const verificar = () =>
     accion(async () => {
@@ -119,6 +126,16 @@ export default function PerfilPage() {
           </p>
         )}
 
+        {estado?.sms_cuenta_prueba && (
+          <p role="note" className="mb-3 flex items-start gap-2 rounded-lg border border-border border-l-2 border-l-accent-600 bg-surface-secondary px-3 py-2 text-[11px] text-content-secondary">
+            <IconInfo size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Cuenta de prueba de Twilio: los SMS <b className="text-content">sí llegan al celular</b>, pero con un texto fijo de Twilio
+              (sin el código ni los datos del sismo). Con una cuenta de pago llega el texto completo.
+            </span>
+          </p>
+        )}
+
         {error && (
           <p role="alert" className="mb-3 rounded-md border border-border border-l-2 border-l-rose-600 bg-surface px-3 py-2 text-xs text-content-secondary">
             {error}
@@ -149,11 +166,13 @@ export default function PerfilPage() {
         ) : pendiente ? (
           <div className="text-xs">
             <p className="mb-2 text-content-secondary">
-              Escriba el código de 6 dígitos que enviamos a <b className="text-content">{estado.telefono}</b>. Vence en 10 minutos.
+              {estado.sms_cuenta_prueba ? "Escriba el código de 6 dígitos para" : "Escriba el código de 6 dígitos que enviamos a"}{" "}
+              <b className="text-content">{estado.telefono}</b>. Vence en 10 minutos.
             </p>
             {codigoDemo && (
               <p className="mb-2 rounded-md bg-surface-secondary px-3 py-1.5 text-[11px] text-content-secondary">
-                Demostración sin SMS real: su código es <b className="font-mono text-content">{codigoDemo}</b>.
+                {estado.sms_cuenta_prueba ? "Cuenta de prueba de Twilio (el SMS no lleva el código)" : "Demostración sin SMS real"}: su
+                código es <b className="font-mono text-content">{codigoDemo}</b>.
               </p>
             )}
             <div className="flex flex-wrap items-center gap-2">

@@ -41,6 +41,8 @@ class AccesoOut(BaseModel):
 
 class SmsOut(BaseModel):
     configurado: bool
+    #: Cuenta de prueba de Twilio: llegan sus plantillas fijas, no el texto del aviso.
+    cuenta_prueba: bool = False
     #: Número emisor de Twilio (público). Nunca el SID ni el token.
     emisor: str | None
 

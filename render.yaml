@@ -61,3 +61,7 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
+      # Cuenta de prueba de Twilio: solo acepta sus plantillas fijas. "true" envía la plantilla
+      # y muestra el código en pantalla. Con una cuenta de pago, cambiarlo a "false".
+      - key: TWILIO_CUENTA_PRUEBA
+        value: "true"

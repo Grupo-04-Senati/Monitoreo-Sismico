@@ -143,6 +143,12 @@ aparece en pantalla y las entregas quedan *Simulada*. Para que el SMS llegue de 
 
 Un número no verificado en la cuenta de prueba queda como entrega *Fallida* con el motivo.
 
+**Cuenta de prueba:** Twilio solo permite allí sus plantillas de texto fijo. Con
+`TWILIO_CUENTA_PRUEBA=true` (valor del Blueprint) el SMS **llega al celular** con el texto
+genérico de Twilio; el código de verificación se muestra en **Mi perfil** y la entrega del
+aviso dice "Cuenta de prueba de Twilio: llegó su plantilla fija…". Para el texto completo
+del aviso: recargar la cuenta de Twilio (*Upgrade*) y poner la variable en `false`.
+
 ## 5. Qué explicar
 
 **Uso empresarial.** Una minera, eléctrica o constructora con activos en zonas sísmicas
