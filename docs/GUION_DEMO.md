@@ -74,6 +74,11 @@ para cambiar de usuario sin cerrar sesión.
   Referencia: ~3 400 filas, informe de calidad y vista previa con la partición.
 - El analista **no** puede aprobarlo. Como **demo-admin** → abrir el dataset → **Aprobar
   dataset** (queda congelado: ni las correcciones de la fuente lo cambian).
+- **Dataset por sector (D32):** otro dataset con *Zona del análisis → Radio alrededor de un
+  punto*: `Miraflores`, latitud `-12.12`, longitud `-77.03`, radio `150` (proyecto
+  inmobiliario) o `Mina Arequipa`, `-16.4`, `-71.5`, `300`. El informe dice cuántos sismos
+  del periodo quedaron fuera (referencia Miraflores M4.5+: 280 en la zona, 115 en el dataset).
+  Mensaje: "cada empresa analiza su propio sector, no todo el país".
 
 ### 5. Modelos ML (Analista → Administrador) — 3 min
 - Como analista → *Nuevo experimento*: tarea *Conteo semanal de sismos*, el dataset aprobado →
@@ -146,4 +151,4 @@ para cambiar de usuario sin cerrar sesión.
 
 - 414 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
   despliegue con HTTPS y simulacro de restauración verificados en cada cambio (CI).
-- Decisiones documentadas (D14–D31), manual técnico y checklist de aceptación en `docs/`.
+- Decisiones documentadas (D14–D32), manual técnico y checklist de aceptación en `docs/`.

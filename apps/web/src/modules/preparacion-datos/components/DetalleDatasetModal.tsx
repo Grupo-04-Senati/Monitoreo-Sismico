@@ -3,7 +3,7 @@ import ExpandModal from "@/components/ui/ExpandModal";
 import { IconCheck } from "@/components/ui/Icons";
 import { fmtDateTimeUTC5 } from "@/lib/format";
 import type { Dataset } from "../types";
-import { ETIQUETA_VARIABLE, OPCIONES_DUPLICADOS, OPCIONES_PROFUNDIDAD, fmtDiaUTC } from "../schemas/datasets.schema";
+import { ETIQUETA_VARIABLE, OPCIONES_DUPLICADOS, OPCIONES_PROFUNDIDAD, fmtDiaUTC, describirZona } from "../schemas/datasets.schema";
 import InformeCalidad from "./InformeCalidad";
 import InsigniaEstadoDataset from "./InsigniaEstadoDataset";
 import VistaPrevia from "./VistaPrevia";
@@ -25,6 +25,7 @@ function configuracion(d: Dataset): [string, string][] {
     ["Descripción", d.description || "—"],
     ["Fuente", d.query_spec?.fuente ?? "Todas las fuentes"],
     ["Periodo (UTC)", `${fmtDiaUTC(d.period_start)} – ${fmtDiaUTC(d.period_end)}`],
+    ["Zona", describirZona(d.query_spec?.zona)],
     ["Magnitud mínima", r.magnitud_minima == null ? "Sin mínimo" : String(r.magnitud_minima)],
     ["Solo revisados", r.solo_revisados ? "Sí" : "No"],
     ["Tipos de magnitud", r.tipos_magnitud ? r.tipos_magnitud.join(", ") : "Todos"],

@@ -23,6 +23,16 @@ export interface Rango {
   mediana: number | null;
 }
 
+/** Sector del dataset (D32): toda la cobertura, departamentos o radio alrededor de un activo. */
+export interface ZonaDataset {
+  tipo: "todo" | "departamentos" | "circulo";
+  departamentos: string[];
+  nombre: string | null;
+  lat: number | null;
+  lon: number | null;
+  radio_km: number | null;
+}
+
 /** Informe de calidad que calcula el backend al crear el dataset. */
 export interface InformeCalidad {
   filas_origen: number;
@@ -42,6 +52,8 @@ export interface InformeCalidad {
   };
   particion: { fecha_corte: string | null; entrenamiento: number; prueba: number };
   advertencias: string[];
+  /** Ausente en datasets creados antes de D32 (= toda la cobertura). */
+  zona?: { tipo: ZonaDataset["tipo"]; descripcion: string; eventos_del_periodo: number; fuera_de_zona: number };
 }
 
 export interface Dataset {
@@ -53,7 +65,7 @@ export interface Dataset {
   source_id: string | null;
   period_start: string;
   period_end: string;
-  query_spec: { fuente?: string | null; desde?: string; hasta?: string };
+  query_spec: { fuente?: string | null; desde?: string; hasta?: string; zona?: ZonaDataset };
   cleaning_rules: ReglasLimpieza;
   variables: Variable[];
   target_name: Variable | null;
@@ -102,6 +114,7 @@ export interface NuevoDataset {
   desde: string;
   hasta: string;
   reglas: ReglasLimpieza;
+  zona: ZonaDataset;
   variables: Variable[];
   variable_objetivo: Variable | null;
   fecha_corte: string | null;

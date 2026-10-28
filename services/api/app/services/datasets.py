@@ -21,6 +21,7 @@ from app.schemas.datasets import DatasetCreateIn
 from app.services import revisiones
 from app.services.audit import registrar_auditoria
 from app.services.calidad_datos import FilaEvento, Reglas, preparar
+from app.services import zona_dataset
 
 
 def _inicio_dia(d) -> datetime:  # noqa: ANN001
@@ -71,14 +72,24 @@ async def crear(
         )
         for e in eventos
     ]
+    # Sector (D32): se filtra antes de las reglas de limpieza, igual que al estimar.
+    zona = payload.zona.model_dump()
+    del_periodo = len(filas)
+    filas, fuera_de_zona = zona_dataset.filtrar(filas, zona)
     reglas = Reglas(**payload.reglas.model_dump())
     corte = _inicio_dia(payload.fecha_corte) if payload.fecha_corte else None
     resultado = preparar(filas, reglas, periodo=(inicio, fin_exclusivo - timedelta(microseconds=1)), fecha_corte=corte)
     if not resultado.filas:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Con ese periodo y esas reglas no queda ningún evento.",
+            detail="Con ese periodo, esa zona y esas reglas no queda ningún evento.",
         )
+    resultado.informe["zona"] = {
+        "tipo": zona["tipo"],
+        "descripcion": zona_dataset.describir(zona),
+        "eventos_del_periodo": del_periodo,
+        "fuera_de_zona": fuera_de_zona,
+    }
 
     version = (
         await db.scalar(select(func.max(Dataset.version)).where(Dataset.name == payload.name)) or 0
@@ -95,6 +106,7 @@ async def crear(
             "fuente": payload.fuente,
             "desde": payload.desde.isoformat(),
             "hasta": payload.hasta.isoformat(),
+            "zona": zona,
         },
         cleaning_rules=asdict(reglas),
         variables=list(payload.variables),

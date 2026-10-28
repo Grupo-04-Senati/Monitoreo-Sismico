@@ -110,6 +110,10 @@ registrar_auditoria(
 
 - `POST /api/v1/datasets` (permiso `preparacion`) crea una **nueva versión** por nombre y
   congela la lista de eventos en `dataset_events`. `POST /{id}/approve` solo Administrador.
+- `zona` (opcional, D32): `{tipo: "todo"}` (por defecto), `{tipo: "departamentos",
+  departamentos: [...]}` o `{tipo: "circulo", nombre?, lat, lon, radio_km}`. Se guarda en
+  `query_spec.zona`; `quality_report.zona` = `{tipo, descripcion, eventos_del_periodo,
+  fuera_de_zona}`. Zona incompleta: 422.
 - Un dataset **aprobado es inmutable** (trigger). Para cambiarlo, nueva versión.
 - Quien entrene con un dataset debe leer sus eventos de `dataset_events` (no volver a
   consultar `seismic_events`) y aplicar `quality_report.imputacion` tal como está

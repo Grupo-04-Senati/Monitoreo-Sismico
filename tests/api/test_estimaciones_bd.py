@@ -195,3 +195,54 @@ def test_sin_el_archivo_del_modelo_se_reconstruye_igual(auditoria):
         primera["value"], primera["lower_bound"], primera["upper_bound"],
     )
     assert carpeta_artefactos().joinpath(f"{experimento['experiment_id']}.joblib").is_file()
+
+
+def test_dataset_por_zona_y_estimacion_del_mismo_sector(auditoria):
+    """Un dataset del sector de la mina tiene menos filas que el de toda la cobertura, lo informa,
+    y su estimación cuenta las semanas recientes en ese mismo sector."""
+    base = {
+        "fuente": "usgs", "desde": "2000-01-01", "hasta": "2025-12-31",
+        "reglas": {"magnitud_minima": 4.5, "sin_profundidad": "imputar_mediana"},
+        "variables": ["occurred_at", "latitude", "longitude", "depth_km"], "variable_objetivo": "magnitude",
+        "fecha_corte": "2021-01-01",
+    }
+    zona = {"tipo": "circulo", "nombre": "Mina Arequipa", "lat": -16.4, "lon": -71.5, "radio_km": 300}
+    with _cliente("admin") as c:
+        todo = c.post("/api/v1/datasets", json={**base, "name": f"{PREFIJO}_zona_todo"}).json()
+        sector = c.post("/api/v1/datasets", json={**base, "name": f"{PREFIJO}_zona_mina", "zona": zona}).json()
+        depto = c.post("/api/v1/datasets", json={**base, "name": f"{PREFIJO}_zona_depto",
+                                                 "zona": {"tipo": "departamentos", "departamentos": ["Arequipa"]}}).json()
+        incompleta = c.post("/api/v1/datasets", json={**base, "name": f"{PREFIJO}_zona_mal", "zona": {"tipo": "circulo"}})
+    assert incompleta.status_code == 422
+    assert 0 < sector["row_count"] < todo["row_count"] and 0 < depto["row_count"] < todo["row_count"]
+    informe = sector["quality_report"]["zona"]
+    assert informe["descripcion"] == "Mina Arequipa: 300 km a la redonda" and informe["fuera_de_zona"] > 0
+    assert sector["query_spec"]["zona"]["radio_km"] == 300
+    assert todo["quality_report"]["zona"]["fuera_de_zona"] == 0
+
+    # La estimación cuenta las semanas recientes en el mismo sector que el dataset.
+    async def _conteos():
+        from datetime import datetime, timezone
+
+        from app.db.database import AsyncSessionLocal
+        from app.db.models import Dataset
+
+        inicio, fin = datetime(2025, 1, 6, tzinfo=timezone.utc), datetime(2025, 12, 29, tzinfo=timezone.utc)
+        async with AsyncSessionLocal() as db:
+            ds_todo, ds_sector = await db.get(Dataset, todo["id"]), await db.get(Dataset, sector["id"])
+            return (
+                sum((await servicio_estimaciones.conteos_recientes(db, ds_todo, inicio, fin))[1]),
+                sum((await servicio_estimaciones.conteos_recientes(db, ds_sector, inicio, fin))[1]),
+            )
+
+    total_todo, total_sector = _ejecutar(_conteos)
+    assert 0 < total_sector < total_todo
+
+    with _cliente("admin") as c:
+        c.post(f"/api/v1/datasets/{sector['id']}/approve")
+        e = c.post("/api/v1/ml/experiments", json={"name": f"{PREFIJO}_zona", "task_type": "conteo_semanal", "dataset_id": sector["id"]}).json()
+        r = c.post(f"/api/v1/ml/models/{e['id']}/approve")
+        if r.status_code != 200:
+            pytest.skip("En ese sector el mejor resultado es una referencia: no hay modelo que aprobar")
+        est = c.post("/api/v1/estimates", json={"model_id": r.json()["id"]}).json()
+    assert est["area_description"].startswith("Mina Arequipa: 300 km a la redonda")
