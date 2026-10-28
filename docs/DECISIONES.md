@@ -465,6 +465,16 @@ solo se registran los puntos grises.
   pantalla (la titularidad del número ya la comprobó Twilio al verificarlo en su panel) y
   cada entrega lo dice en su detalle. Con una cuenta de pago se pone en `false` y llega el
   texto completo del aviso.
+- **Segundo proveedor, de código abierto (`SMS_PROVEEDOR=smsgate`):** *SMS Gateway for
+  Android* (github.com/capcom6/android-sms-gateway, Apache 2.0). Un celular Android con su
+  chip envía los SMS con su plan; Sismora deja cada mensaje en el servidor del gateway (su nube
+  pública, o uno propio con `SMSGATE_URL`) con el usuario y la clave de la app. Llega el texto
+  completo y el código real, desde un número peruano, sin lista de números verificados. Como
+  el celular toma el mensaje de una cola, se consulta su estado ~12 s: *Sent* → entregada;
+  *Failed* → fallida con el motivo; sin respuesta → entregada con la nota "En cola del
+  celular". Límites: el celular debe estar encendido, con datos y sin optimización de batería
+  para la app; el operador limita los envíos masivos desde un chip; el número emisor es el
+  del chip (en una empresa, un celular y chip dedicados). Twilio queda para volumen alto.
 - **Descartado:** WhatsApp (plantillas aprobadas por Meta, días de trámite), Telegram (no
   usa el número de teléfono) y que un administrador cargue números ajenos (sin consentimiento).
 

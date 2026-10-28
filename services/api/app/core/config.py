@@ -66,7 +66,13 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
-    #: Avisos por SMS (D31). Solo se envía si están los tres; si no, la entrega queda "simulada".
+    #: Avisos por SMS (D31). Proveedor: "twilio" o "smsgate" (SMS Gateway for Android, código
+    #: abierto). Sin sus credenciales, la entrega queda "simulada".
+    SMS_PROVEEDOR: str = "twilio"
+    #: SMS Gateway for Android: servidor (nube pública por defecto) y usuario/clave de la app.
+    SMSGATE_URL: str = "https://api.sms-gate.app/3rdparty/v1"
+    SMSGATE_USUARIO: str = ""
+    SMSGATE_CLAVE: str = ""
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     #: Número emisor de Twilio en formato E.164 (p. ej. +15551234567).

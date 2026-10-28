@@ -243,8 +243,9 @@ async def entorno(db: AsyncSession) -> dict[str, Any]:
         # Sin secretos: solo si Twilio está configurado y el número emisor (público).
         "sms": {
             "configurado": canal_sms.configurado(),
+            "proveedor": canal_sms.proveedor(),
             "cuenta_prueba": canal_sms.cuenta_prueba(),
-            "emisor": settings.TWILIO_FROM_NUMBER or None,
+            "emisor": canal_sms.emisor(),
         },
         # Quién programa la ingesta: Celery beat (producción) o la propia API (demo, D33).
         "sincronizacion": {

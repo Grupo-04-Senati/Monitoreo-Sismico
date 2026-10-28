@@ -143,6 +143,21 @@ aparece en pantalla y las entregas quedan *Simulada*. Para que el SMS llegue de 
 
 Un número no verificado en la cuenta de prueba queda como entrega *Fallida* con el motivo.
 
+**SMS Gateway for Android (código abierto, alternativa a Twilio):** el SMS sale de un celular
+Android con chip, con el texto completo y el código real.
+
+1. Instalar **SMS Gateway for Android** en el celular (Play Store o el APK de
+   github.com/capcom6/android-sms-gateway), darle permiso de SMS y quitarle la
+   **optimización de batería** (Ajustes → Apps → SMS Gateway → Batería → Sin restricciones).
+2. En la app, activar **Cloud server** y encenderla: muestra un **usuario** y una **clave**.
+3. Render → `sismo-demo` → **Environment**: `SMS_PROVEEDOR=smsgate`, `SMSGATE_USUARIO` y
+   `SMSGATE_CLAVE` (secreta) → *Save, rebuild, and deploy*. Configuración → *Entorno del
+   servidor* debe decir "Proveedor de SMS: SMS Gateway for Android" y "Configurado".
+4. Cada persona se registra en **Mi perfil**: el código le llega por SMS desde el número del
+   celular. Para volver a Twilio: `SMS_PROVEEDOR=twilio`.
+
+Durante la demo el celular debe estar encendido, con datos o wifi y saldo de SMS.
+
 **Cuenta de prueba:** Twilio solo permite allí sus plantillas de texto fijo. Con
 `TWILIO_CUENTA_PRUEBA=true` (valor del Blueprint) el SMS **llega al celular** con el texto
 genérico de Twilio; el código de verificación se muestra en **Mi perfil** y la entrega del

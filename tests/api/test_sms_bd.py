@@ -145,7 +145,7 @@ def test_registro_verificacion_y_entrega_por_sms(usuarios, monkeypatch):
         avisos = c.post("/api/v1/demo/simulate", json={"zona": "mina_arequipa", "magnitud": 5.5, "cantidad": 2}).json()["avisos"]  # réplica ≥ 4.3
 
         enviados: list[tuple[str, str]] = []
-        monkeypatch.setattr(sms, "enviar", lambda numero, texto: enviados.append((numero, texto)) or "SM1")
+        monkeypatch.setattr(sms, "enviar", lambda numero, texto: enviados.append((numero, texto)) or sms.Envio("SM1"))
         aprobado = c.post(f"/api/v1/alerts/{avisos[0]['id']}/approve").json()
         entregas_sms = [e for e in aprobado["entregas"] if e["channel"] == "sms"]
         assert enviados and enviados[0][0] == "+51987654321" and "No es alerta oficial" in enviados[0][1]
@@ -185,6 +185,7 @@ def test_twilio_rechaza_un_numero_no_verificado(monkeypatch):
 
 
 def _twilio_de_prueba(monkeypatch, cuenta_prueba: bool) -> None:
+    monkeypatch.setattr(settings, "SMS_PROVEEDOR", "twilio")
     monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_prueba")
     monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "token_prueba")
     monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+15550000000")
@@ -225,7 +226,7 @@ def test_cuenta_de_prueba_muestra_el_codigo_y_anota_la_entrega(usuarios, monkeyp
     _twilio_de_prueba(monkeypatch, cuenta_prueba=True)
     monkeypatch.setattr(settings, "DEMO_SIMULACION", True)
     enviados: list[tuple[str, str]] = []
-    monkeypatch.setattr(sms, "enviar", lambda numero, texto, plantilla=sms.PLANTILLA_AVISO: enviados.append((numero, plantilla)) or "SM1")
+    monkeypatch.setattr(sms, "enviar", lambda numero, texto, plantilla=sms.PLANTILLA_AVISO: enviados.append((numero, plantilla)) or sms.Envio("SM1", sms.NOTA_PRUEBA))
     with TestClient(app) as c:
         _como(viewer, "viewer")
         r = c.post("/api/v1/me/telefono", json={"telefono": "987654321", "consentimiento": True}).json()
@@ -243,3 +244,90 @@ def test_cuenta_de_prueba_muestra_el_codigo_y_anota_la_entrega(usuarios, monkeyp
         entrega = [e for e in c.post(f"/api/v1/alerts/{aviso['id']}/approve").json()["entregas"] if e["channel"] == "sms"][0]
         assert entrega["status"] == "entregada" and "plantilla fija" in entrega["error"]
         assert c.get("/api/v1/settings").json()["entorno"]["sms"]["cuenta_prueba"] is True
+
+
+# --- SMS Gateway for Android (proveedor "smsgate") -------------------------------------
+
+
+class _Gateway:
+    """Imita la API de SMS Gateway: guarda las peticiones y devuelve los estados indicados."""
+
+    def __init__(self, estados: list[dict]):
+        self.estados = estados
+        self.peticiones: list[tuple[str, str, dict | None, str]] = []
+
+    def __call__(self, peticion, timeout):  # noqa: ARG002
+        import io
+        import json
+
+        cuerpo = json.loads(peticion.data.decode()) if peticion.data else None
+        self.peticiones.append((peticion.get_method(), peticion.full_url, cuerpo, peticion.get_header("Authorization")))
+
+        class _Respuesta(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_a):
+                return False
+
+        return _Respuesta(json.dumps(self.estados.pop(0)).encode())
+
+
+def _smsgate(monkeypatch, estados: list[dict]) -> _Gateway:
+    monkeypatch.setattr(settings, "SMS_PROVEEDOR", "smsgate")
+    monkeypatch.setattr(settings, "SMSGATE_URL", "https://api.sms-gate.app/3rdparty/v1/")
+    monkeypatch.setattr(settings, "SMSGATE_USUARIO", "usuario")
+    monkeypatch.setattr(settings, "SMSGATE_CLAVE", "clave")
+    monkeypatch.setattr(sms, "PAUSA_ESTADO_SEG", 0)
+    gateway = _Gateway(estados)
+    monkeypatch.setattr(sms.urllib.request, "urlopen", gateway)
+    return gateway
+
+
+def test_smsgate_envia_el_texto_completo_y_espera_que_salga(monkeypatch):
+    gateway = _smsgate(monkeypatch, [{"id": "m1", "state": "Pending"}, {"id": "m1", "state": "Processed"}, {"id": "m1", "state": "Sent"}])
+    assert sms.configurado() and not sms.cuenta_prueba() and sms.emisor() == "celular Android (SMS Gateway)"
+    envio = sms.enviar("+51987654321", "Sismo M5.5 a 13 km de la mina", sms.PLANTILLA_AVISO)
+    assert envio == sms.Envio("m1")  # salió: sin nota
+    metodo, url, cuerpo, auth = gateway.peticiones[0]
+    assert metodo == "POST" and url == "https://api.sms-gate.app/3rdparty/v1/messages"
+    assert cuerpo == {"textMessage": {"text": "Sismo M5.5 a 13 km de la mina"}, "phoneNumbers": ["+51987654321"]}  # nunca la plantilla
+    assert auth.startswith("Basic ")
+    assert [p[:2] for p in gateway.peticiones[1:]] == [("GET", "https://api.sms-gate.app/3rdparty/v1/messages/m1")] * 2
+
+
+def test_smsgate_fallido_y_en_cola(monkeypatch):
+    _smsgate(monkeypatch, [{"id": "m2", "state": "Pending"}, {"id": "m2", "state": "Failed", "recipients": [{"phoneNumber": "+51987654321", "state": "Failed", "error": "RESULT_ERROR_NO_SERVICE"}]}])
+    with pytest.raises(sms.SmsFallido, match="RESULT_ERROR_NO_SERVICE"):
+        sms.enviar("+51987654321", "hola")
+
+    _smsgate(monkeypatch, [{"id": "m3", "state": "Pending"}])
+    monkeypatch.setattr(sms, "ESPERA_ESTADO_SEG", 0)  # el celular no lo tomó a tiempo
+    assert sms.enviar("+51987654321", "hola") == sms.Envio("m3", sms.NOTA_EN_COLA)
+
+
+def test_smsgate_credenciales_incorrectas(monkeypatch):
+    import io
+    import urllib.error
+
+    _smsgate(monkeypatch, [])
+
+    def rechazo(*_a, **_k):
+        raise urllib.error.HTTPError("https://api.sms-gate.app", 401, "Unauthorized", {}, io.BytesIO(b""))
+
+    monkeypatch.setattr(sms.urllib.request, "urlopen", rechazo)
+    with pytest.raises(sms.SmsFallido, match="usuario o clave de SMS Gateway incorrectos"):
+        sms.enviar("+51987654321", "hola")
+    monkeypatch.setattr(settings, "SMSGATE_CLAVE", "")
+    with pytest.raises(sms.SmsDesactivado):
+        sms.enviar("+51987654321", "hola")
+
+
+def test_smsgate_el_codigo_llega_por_sms_y_no_se_muestra(usuarios, monkeypatch):
+    viewer, _admin = usuarios
+    _smsgate(monkeypatch, [{"id": "m4", "state": "Sent"}])
+    monkeypatch.setattr(settings, "DEMO_SIMULACION", True)
+    with TestClient(app) as c:
+        _como(viewer, "viewer")
+        r = c.post("/api/v1/me/telefono", json={"telefono": "987654321", "consentimiento": True}).json()
+    assert r["simulado"] is False and r["sms_cuenta_prueba"] is False and "codigo_demo" not in r
