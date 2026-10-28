@@ -39,6 +39,18 @@ class AccesoOut(BaseModel):
     almacen: str = "memoria"
 
 
+class SmsOut(BaseModel):
+    configurado: bool
+    #: Número emisor de Twilio (público). Nunca el SID ni el token.
+    emisor: str | None
+
+
+class SincronizacionOut(BaseModel):
+    #: true: la programa la propia API (demo, D33); false: Celery beat.
+    en_proceso: bool
+    cada_minutos: int
+
+
 class EntornoOut(BaseModel):
     """Lo que vive en `.env`: se muestra sin secretos y no se edita desde la web."""
 
@@ -48,6 +60,8 @@ class EntornoOut(BaseModel):
     cookies_seguras: bool
     sesion_minutos: int
     correo: CorreoOut
+    sms: SmsOut
+    sincronizacion: SincronizacionOut
     acceso: AccesoOut
     advertencias: list[str]
 

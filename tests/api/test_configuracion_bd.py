@@ -122,6 +122,9 @@ def test_parametros_validacion_y_control_de_cambios(auditoria):
         claves = {p["clave"]: p for p in datos["parametros"]}
         assert claves["reportes_ttl_horas"]["valor"] == 24 and not claves["reportes_ttl_horas"]["personalizado"]
         assert "advertencias" in datos["entorno"] and "SMTP_PASSWORD" not in str(datos)
+        # SMS y sincronización llegan a la pantalla (antes el esquema los descartaba).
+        assert set(datos["entorno"]["sms"]) == {"configurado", "emisor"}
+        assert datos["entorno"]["sincronizacion"]["cada_minutos"] >= 1
 
         assert c.put("/api/v1/settings/reportes_ttl_horas", json={"valor": 500}).status_code == 422
         assert c.put("/api/v1/settings/no_existe", json={"valor": 5}).status_code == 404
