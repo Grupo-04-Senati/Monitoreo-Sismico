@@ -53,8 +53,15 @@ services:
       # El workflow "Demo despierta" la visita cada 5 min para que Render no la duerma.
       - key: SYNC_EN_PROCESO
         value: "true"
-      # SMS de avisos (D31): se completan a mano en Render con los datos de Twilio.
-      # Vacíos, los SMS quedan "simulados". El Auth Token es secreto: nunca en el repo.
+      # SMS de avisos (D31). Proveedor: "twilio" o "smsgate" (SMS Gateway for Android,
+      # código abierto). Se cambia a mano en Render; las credenciales también (secretas).
+      - key: SMS_PROVEEDOR
+        sync: false
+      - key: SMSGATE_USUARIO
+        sync: false
+      - key: SMSGATE_CLAVE
+        sync: false
+      # Twilio: vacíos, los SMS quedan "simulados". El Auth Token es secreto: nunca en el repo.
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN

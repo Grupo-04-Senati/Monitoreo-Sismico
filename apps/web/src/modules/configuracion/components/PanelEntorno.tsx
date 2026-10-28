@@ -24,8 +24,9 @@ export default function PanelEntorno({ entorno: e }: { entorno: Entorno }) {
         ? `En la propia API, cada ${e.sincronizacion.cada_minutos} min (demo sin worker)`
         : `Worker programado (Celery beat), cada ${e.sincronizacion?.cada_minutos ?? 15} min`,
     ],
+    ["Proveedor de SMS", e.sms?.proveedor === "smsgate" ? "SMS Gateway for Android (código abierto)" : "Twilio"],
     [
-      "SMS de avisos (Twilio)",
+      "SMS de avisos",
       e.sms?.configurado
         ? `Configurado${e.sms.cuenta_prueba ? " (cuenta de prueba: texto fijo de Twilio)" : ""} · emisor ${e.sms.emisor ?? "—"}`
         : "Sin configurar (entregas “simuladas”)",

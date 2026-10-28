@@ -115,10 +115,9 @@ async def entregar(db: AsyncSession, alerta: Alert, regla: AlertRule) -> None:
             continue
         if canal == "sms":
             try:
-                await asyncio.to_thread(canal_sms.enviar, telefonos[destino], cuerpo_sms)
-                # En la cuenta de prueba llega la plantilla fija de Twilio: se deja dicho en el detalle.
-                nota = canal_sms.NOTA_PRUEBA if canal_sms.cuenta_prueba() else None
-                entrega.status, entrega.delivered_at, entrega.error = "entregada", ahora, nota
+                envio = await asyncio.to_thread(canal_sms.enviar, telefonos[destino], cuerpo_sms)
+                # La nota dice si llegó la plantilla de prueba de Twilio o si quedó en cola del celular.
+                entrega.status, entrega.delivered_at, entrega.error = "entregada", ahora, envio.nota
             except canal_sms.SmsDesactivado as exc:
                 entrega.status, entrega.error = "simulada", str(exc)[:300]
             except canal_sms.SmsFallido as exc:
