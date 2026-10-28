@@ -479,3 +479,22 @@ solo se registran los puntos grises.
 - **Descartado:** polígonos dibujados a mano (más complejo, sin necesidad para la demo) y
   filtrar después de limpiar (las reglas y la partición se calcularían sobre otra muestra).
 
+## D33. Sincronización automática dentro de la API para la demo sin worker
+
+- **Decisión:** con `SYNC_EN_PROCESO=true` la API, al arrancar, lanza una tarea de fondo que
+  cada minuto revisa las fuentes habilitadas y sincroniza las que llevan más de
+  `INGESTION_INTERVAL_MINUTES` (15) sin hacerlo, con el mismo motor que Celery (ejecución
+  `scheduled`, correcciones y evaluación de reglas). No lanza otra si hay una en curso (una
+  "en curso" de más de 30 min se da por colgada). Un workflow de GitHub Actions
+  (*Demo despierta*) visita `/health/ready` cada 5 min para que Render no duerma el servicio.
+- **Motivo:** el plan gratuito de Render no tiene worker ni Redis; sin esto, durante la
+  semana de demo un sismo real solo generaba su aviso si alguien pulsaba *Sincronizar
+  ahora*. Ahora la cadena "sismo → aviso" es automática, como en producción.
+- **Costo:** solo vale con **un** proceso de la API (`API_WORKERS=1`); con varios, cada uno
+  tendría su tarea (la regla de "en curso" evita casi todos los duplicados, no todos).
+  GitHub puede atrasar unos minutos los workflows programados. Mantener el servicio despierto
+  consume horas del plan gratuito (750 h/mes por cuenta).
+- **Descartado:** un servicio *Cron Job* de Render (de pago) y un monitor externo con cuenta
+  aparte (UptimeRobot u otro): el workflow vive en el repositorio y no pide cuentas nuevas.
+  Producción sigue con Celery beat (`SYNC_EN_PROCESO=false` por defecto).
+

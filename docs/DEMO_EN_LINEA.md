@@ -17,10 +17,10 @@ PC del equipo ──SSL──► misma base (solo para crearla y la carga inicia
 | Producción (`infra/prod`) | Demo en Render |
 |---|---|
 | Caddy + web + API + worker + beat + Redis + copias | Un solo servicio (API sirve la web) + base |
-| Sincronización automática cada 15 min | Solo manual (Fuentes de datos → *Sincronización manual*) |
+| Sincronización automática cada 15 min (worker + beat) | Automática cada 15 min **dentro de la API** (`SYNC_EN_PROCESO`, D33) |
 | Sismos solo reales | Reales **más** ficticios del simulador, marcados `[SIMULADO]` |
 | Copias diarias | Ninguna (el estado *Copias de seguridad* lo indica) |
-| Siempre encendido | Se duerme a los 15 min sin uso; despierta en ~1 min |
+| Siempre encendido | Se dormiría a los 15 min sin visitas: el workflow **Demo despierta** la visita cada 5 min |
 
 ## 1. La base de datos (~5 min)
 
@@ -115,6 +115,17 @@ Siempre se distingue de los reales: su lugar empieza con `[SIMULADO]` y su fuent
 guion (*Mina Arequipa M4.5, 300 km*) y simular un M5.2 con 2 réplicas en Mina Arequipa →
 3 sismos y avisos en el Centro de alertas.
 
+### Sincronización automática y servicio despierto (D33)
+
+- La API trae lo nuevo del USGS **sola cada 15 minutos** (`SYNC_EN_PROCESO=true` en Render):
+  un sismo real que cumpla una regla activa genera su aviso sin que nadie pulse nada.
+- El workflow de GitHub **Demo despierta** (`.github/workflows/demo-despierta.yml`) visita
+  la demo cada 5 minutos para que Render no la duerma. Está en la pestaña *Actions*; se
+  puede lanzar a mano (*Run workflow*) y apagar al terminar la semana.
+- Mantenerla despierta consume horas del plan gratuito (750 h al mes por cuenta,
+  compartidas con otros servicios gratuitos, como salesia-api): una semana son ~170 h.
+- Configuración → *Entorno del servidor* → "Sincronización automática" lo confirma.
+
 ### SMS al celular (opcional, Twilio)
 
 Sin configurar nada, el canal SMS funciona en **modo simulado**: el código de verificación
@@ -169,10 +180,13 @@ Nunca predice sismos ni reemplaza al IGP o INDECI.
 | `permission denied to create database` | Usar una base gratuita de Neon (paso 1) |
 | El simulador no aparece | Debe entrar como Administrador y el servicio tener `DEMO_SIMULACION=true` |
 | Simular no genera avisos | Ninguna regla **activa** cubre la zona o la magnitud |
-| *Ingesta* en Atención | No hay sincronización automática: *Sincronización manual* en Fuentes de datos |
+| *Ingesta* en Atención | El servicio estuvo dormido (el workflow *Demo despierta* falló o está apagado): *Sincronizar ahora* en Fuentes de datos y revisar la pestaña Actions de GitHub |
 | Se olvidó la contraseña de demo | Repetir `preparar_demo cuentas` con otra `DEMO_PASSWORD` (paso 3) |
 
 ## 7. Después
+
+0. GitHub → pestaña **Actions** → *Demo despierta* → **...** → **Disable workflow** (deja de
+   visitar la demo).
 
 1. Render → **Blueprints** → `sismora-demo` → *Settings* → borrar el Blueprint, y el
    servicio `sismo-demo` → *Settings* → **Delete Web Service**.

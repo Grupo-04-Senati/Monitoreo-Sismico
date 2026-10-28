@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     INGESTION_SOURCE_KEY: str = "igp"
     #: Frecuencia de la ingesta programada (minutos).
     INGESTION_INTERVAL_MINUTES: int = 15
+    #: Sincronizar dentro del proceso de la API (D33): solo donde no hay Celery beat (demo
+    #: de Render). Con un solo proceso de la API (API_WORKERS=1).
+    SYNC_EN_PROCESO: bool = False
 
     #: Carpeta de copias de seguridad que vigila el monitoreo (vacío = no se vigila).
     MONITOREO_BACKUP_DIR: str = ""
