@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
 import { IconDatabase, IconInfo } from "@/components/ui/Icons";
-import type { FuenteOpcion, NuevoDataset as Formulario, TipoMagnitudPermitido, Variable } from "../types";
+import type { FuenteOpcion, NuevoDataset as Formulario, TipoMagnitudPermitido, Variable, ZonaDataset } from "../types";
+import { REGION_OPTIONS } from "@/lib/catalogo";
 import {
   OPCIONES_DUPLICADOS,
   OPCIONES_PROFUNDIDAD,
@@ -52,6 +53,17 @@ export default function NuevoDataset({
   const problema = validarFormulario(f);
   const set = (patch: Partial<Formulario>) => setF((p) => ({ ...p, ...patch }));
   const setReglas = (patch: Partial<Formulario["reglas"]>) => setF((p) => ({ ...p, reglas: { ...p.reglas, ...patch } }));
+  const setZona = (patch: Partial<ZonaDataset>) => setF((p) => ({ ...p, zona: { ...p.zona, ...patch } }));
+  const numeroZona = (texto: string): number | null => {
+    const t = texto.trim().replace(",", ".");
+    return t === "" || Number.isNaN(Number(t)) ? null : Number(t);
+  };
+  const alternarDepto = (nombre: string) =>
+    setZona({
+      departamentos: f.zona.departamentos.includes(nombre)
+        ? f.zona.departamentos.filter((d) => d !== nombre)
+        : [...f.zona.departamentos, nombre],
+    });
 
   const alternarVariable = (v: Variable) =>
     set({ variables: f.variables.includes(v) ? f.variables.filter((x) => x !== v) : [...f.variables, v] });
@@ -122,6 +134,66 @@ export default function NuevoDataset({
             className={campoCls}
           />
         </label>
+
+        {/* Zona (sector) del dataset (D32) */}
+        <div>
+          <p className="mb-1 text-xs font-semibold text-content">Zona del análisis</p>
+          <p className="mb-2 text-[11px] text-content-muted">
+            Limita el dataset al sector que le importa a la empresa (una mina, una obra, un terreno). La estimación del modelo
+            contará en esa misma zona.
+          </p>
+          <div className="mb-2 inline-flex overflow-hidden rounded-md border border-border" role="group" aria-label="Tipo de zona">
+            {(
+              [
+                ["todo", "Toda la cobertura"],
+                ["departamentos", "Departamentos"],
+                ["circulo", "Radio alrededor de un punto"],
+              ] as const
+            ).map(([valor, etiqueta]) => (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={f.zona.tipo === valor}
+                onClick={() => setZona({ tipo: valor })}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  f.zona.tipo === valor ? "bg-accent-600 text-white" : "bg-surface text-content-secondary hover:bg-surface-tertiary"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+          {f.zona.tipo === "departamentos" && (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4 lg:grid-cols-5">
+              {REGION_OPTIONS.map((r) => (
+                <label key={r.slug} className="flex items-center gap-1.5 text-xs text-content">
+                  <input type="checkbox" checked={f.zona.departamentos.includes(r.name)} onChange={() => alternarDepto(r.name)} />
+                  {r.name}
+                </label>
+              ))}
+            </div>
+          )}
+          {f.zona.tipo === "circulo" && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="flex flex-col gap-1">
+                <span className={etiquetaCls}>Nombre del lugar</span>
+                <input value={f.zona.nombre ?? ""} onChange={(e) => setZona({ nombre: e.target.value || null })} placeholder="p. ej. Mina Arequipa" maxLength={120} className={campoCls} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={etiquetaCls}>Latitud del centro</span>
+                <input inputMode="decimal" defaultValue={f.zona.lat ?? ""} onChange={(e) => setZona({ lat: numeroZona(e.target.value) })} placeholder="-16.40" className={campoCls} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={etiquetaCls}>Longitud del centro</span>
+                <input inputMode="decimal" defaultValue={f.zona.lon ?? ""} onChange={(e) => setZona({ lon: numeroZona(e.target.value) })} placeholder="-71.50" className={campoCls} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={etiquetaCls}>Radio (km)</span>
+                <input inputMode="decimal" defaultValue={f.zona.radio_km ?? ""} onChange={(e) => setZona({ radio_km: numeroZona(e.target.value) })} placeholder="200" className={campoCls} />
+              </label>
+            </div>
+          )}
+        </div>
 
         {/* Reglas de limpieza */}
         <div>

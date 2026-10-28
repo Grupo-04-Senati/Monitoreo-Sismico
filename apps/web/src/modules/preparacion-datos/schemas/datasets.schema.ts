@@ -1,4 +1,4 @@
-import type { EstadoDataset, NuevoDataset, ReglaDuplicados, ReglaProfundidad, TipoMagnitudPermitido, Variable } from "../types";
+import type { EstadoDataset, NuevoDataset, ReglaDuplicados, ReglaProfundidad, TipoMagnitudPermitido, Variable, ZonaDataset } from "../types";
 
 /* Etiquetas, opciones y validación del formulario (espejo de las reglas del
    backend: `services/api/app/schemas/datasets.py`). */
@@ -67,6 +67,16 @@ export const ETIQUETA_REVISION: Record<string, string> = {
   pendiente_validacion: "Pendiente de validación",
 };
 
+export const ZONA_TODA: ZonaDataset = { tipo: "todo", departamentos: [], nombre: null, lat: null, lon: null, radio_km: null };
+
+/** Texto de la zona, igual que el del backend. */
+export function describirZona(z: ZonaDataset | null | undefined): string {
+  if (!z || z.tipo === "todo") return "Toda la cobertura del catálogo (Perú y alrededores)";
+  if (z.tipo === "departamentos") return `Departamentos: ${z.departamentos.join(", ")}`;
+  const lugar = z.nombre || `(${z.lat?.toFixed(2)}, ${z.lon?.toFixed(2)})`;
+  return `${lugar}: ${z.radio_km} km a la redonda`;
+}
+
 export function formularioInicial(desde: string, hasta: string): NuevoDataset {
   return {
     name: "",
@@ -81,6 +91,7 @@ export function formularioInicial(desde: string, hasta: string): NuevoDataset {
       sin_profundidad: "conservar",
       posibles_duplicados: "conservar",
     },
+    zona: ZONA_TODA,
     variables: ["occurred_at", "latitude", "longitude", "depth_km"],
     variable_objetivo: "magnitude",
     fecha_corte: null,
@@ -102,6 +113,13 @@ export function validarFormulario(f: NuevoDataset): string | null {
   if (m != null && (m < 0 || m > 10)) return "La magnitud mínima debe estar entre 0 y 10.";
   if (f.reglas.tipos_magnitud && f.reglas.tipos_magnitud.length === 0)
     return "Elige al menos un tipo de magnitud o desactiva el filtro.";
+  const z = f.zona;
+  if (z.tipo === "departamentos" && z.departamentos.length === 0) return "Elige al menos un departamento para la zona.";
+  if (z.tipo === "circulo") {
+    if (z.lat == null || z.lat < -90 || z.lat > 90) return "La latitud del centro va de −90 a 90.";
+    if (z.lon == null || z.lon < -180 || z.lon > 180) return "La longitud del centro va de −180 a 180.";
+    if (z.radio_km == null || z.radio_km <= 0 || z.radio_km > 2000) return "El radio de la zona va de 1 a 2000 km.";
+  }
   return null;
 }
 

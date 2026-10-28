@@ -34,6 +34,7 @@ from app.db.models import (
 from app.services import configuracion
 from app.services.audit import registrar_auditoria
 from app.services.calidad_datos import FilaEvento, Reglas, preparar
+from app.services import zona_dataset
 from app.services.ml_bridge import carpeta_artefactos, conteos_semanales, inferencia_conteo, inicio_semana
 
 DISCLAIMER = (
@@ -76,6 +77,27 @@ async def _modelo_y_contexto(db: AsyncSession, model_id: str) -> tuple[ModelRegi
     return modelo, experimento, dataset
 
 
+async def conteos_recientes(db: AsyncSession, dataset: Dataset, inicio, fin_exclusivo) -> tuple[list, list[int]]:
+    """Sismos por semana entre `inicio` y `fin_exclusivo`, contados como en el entrenamiento:
+    misma fuente, misma zona (D32) y mismas reglas de limpieza que el dataset del modelo."""
+    fin = fin_exclusivo - timedelta(microseconds=1)
+    consulta = select(SeismicEvent).where(SeismicEvent.occurred_at >= inicio, SeismicEvent.occurred_at < fin_exclusivo)
+    if dataset.source_id:
+        consulta = consulta.where(SeismicEvent.source_id == dataset.source_id)
+    eventos = (await db.execute(consulta)).scalars().all()
+    filas = [
+        FilaEvento(
+            id=e.id, occurred_at=e.occurred_at, latitude=e.latitude, longitude=e.longitude, depth_km=e.depth_km,
+            magnitude=e.magnitude, magnitude_type=e.magnitude_type, review_status=e.review_status,
+            origin_hash=e.origin_hash, region=e.region,
+        )
+        for e in eventos
+    ]
+    filas, _fuera = zona_dataset.filtrar(filas, (dataset.query_spec or {}).get("zona"))
+    conservados = {i for i, _ in preparar(filas, Reglas(**dataset.cleaning_rules), periodo=(inicio, fin)).filas}
+    return conteos_semanales([f.occurred_at for f in filas if f.id in conservados], inicio, fin)
+
+
 async def crear(
     db: AsyncSession, actor: User, model_id: str, *, correlation_id: str | None = None
 ) -> RiskEstimate:
@@ -85,32 +107,8 @@ async def crear(
     inicio_ventana = inicio_semana(ahora)
     fin_ventana = inicio_ventana + timedelta(days=7)
     inicio_historia = inicio_ventana - timedelta(weeks=inferencia_conteo.SEMANAS_NECESARIAS)
-    fin_historia = inicio_ventana - timedelta(microseconds=1)
 
-    consulta = select(SeismicEvent).where(
-        SeismicEvent.occurred_at >= inicio_historia, SeismicEvent.occurred_at < inicio_ventana
-    )
-    if dataset.source_id:
-        consulta = consulta.where(SeismicEvent.source_id == dataset.source_id)
-    eventos = (await db.execute(consulta)).scalars().all()
-    filas = [
-        FilaEvento(
-            id=e.id,
-            occurred_at=e.occurred_at,
-            latitude=e.latitude,
-            longitude=e.longitude,
-            depth_km=e.depth_km,
-            magnitude=e.magnitude,
-            magnitude_type=e.magnitude_type,
-            review_status=e.review_status,
-            origin_hash=e.origin_hash,
-        )
-        for e in eventos
-    ]
-    # Mismas reglas que el dataset del modelo: se cuenta igual que en el entrenamiento.
-    conservados = {i for i, _ in preparar(filas, Reglas(**dataset.cleaning_rules), periodo=(inicio_historia, fin_historia)).filas}
-    fechas = [f.occurred_at for f in filas if f.id in conservados]
-    semanas, conteos = conteos_semanales(fechas, inicio_historia, fin_historia)
+    semanas, conteos = await conteos_recientes(db, dataset, inicio_historia, inicio_ventana)
 
     ruta = carpeta_artefactos() / experimento.artifact_uri if experimento.artifact_uri else None
     if ruta is None or not ruta.is_file():
@@ -146,7 +144,10 @@ async def crear(
     estimacion = RiskEstimate(
         model_id=modelo.id,
         area_code=f"dataset:{dataset.id}"[:64],
-        area_description=f"Cobertura del dataset {dataset.name} v{dataset.version} ({_resumen_reglas(dataset)})"[:255],
+        area_description=(
+            f"{zona_dataset.describir((dataset.query_spec or {}).get('zona'))} · dataset {dataset.name} "
+            f"v{dataset.version} ({_resumen_reglas(dataset)})"
+        )[:255],
         window_start=inicio_ventana,
         window_end=fin_ventana,
         metric_name=METRICA,

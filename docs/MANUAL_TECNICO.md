@@ -1,7 +1,7 @@
 # Manual técnico
 
 Referencia para quien opera o continúa la plataforma. Lo que no está aquí está en:
-`docs/DECISIONES.md` (el porqué de cada decisión, D1–D31), `docs/CONTRATOS.md` (API y
+`docs/DECISIONES.md` (el porqué de cada decisión, D1–D32), `docs/CONTRATOS.md` (API y
 reglas compartidas), `docs/DESPLIEGUE.md` (instalación, copias y recuperación) y
 `docs/HANDOFF.md` (entorno local y pendientes).
 

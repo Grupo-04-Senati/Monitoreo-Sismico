@@ -461,3 +461,21 @@ solo se registran los puntos grises.
 - **Descartado:** WhatsApp (plantillas aprobadas por Meta, días de trámite), Telegram (no
   usa el número de teléfono) y que un administrador cargue números ajenos (sin consentimiento).
 
+## D32. Dataset por sector: departamentos o radio alrededor de un activo
+
+- **Decisión:** al crear un dataset se elige su **zona**: toda la cobertura (como antes),
+  uno o varios **departamentos** (campo `region`, asignado con los límites del INEI) o un
+  **radio alrededor de un punto** (distancia al epicentro). Se guarda en
+  `query_spec.zona`, se filtra **antes** de las reglas de limpieza y el informe de calidad
+  dice cuántos eventos del periodo quedaron fuera. La **estimación** de un modelo cuenta las
+  semanas recientes en la misma zona que su dataset (`conteos_recientes`), y su "unidad
+  espacial" la nombra.
+- **Motivo:** el análisis útil para una empresa es el de **su** sector (una mina, una obra,
+  un terreno): "¿cuántos sismos por semana son normales a 200 km de mi instalación?".
+  Antes, todo dataset abarcaba la cobertura completa (Perú y alrededores).
+- **Costo:** en un sector pequeño hay pocos sismos por semana y a menudo ningún modelo
+  supera a la media histórica; el sistema lo informa y no deja aprobar un modelo que no
+  aporte. Los datasets anteriores, sin zona, se leen como "toda la cobertura".
+- **Descartado:** polígonos dibujados a mano (más complejo, sin necesidad para la demo) y
+  filtrar después de limpiar (las reglas y la partición se calcularían sobre otra muestra).
+

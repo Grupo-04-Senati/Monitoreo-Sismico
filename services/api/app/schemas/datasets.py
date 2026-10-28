@@ -26,6 +26,33 @@ class ReglasLimpiezaIn(BaseModel):
     posibles_duplicados: Literal["excluir", "conservar"] = "conservar"
 
 
+#: Los 25 departamentos tal como los guarda la plataforma (campo `region`, D24).
+DEPARTAMENTOS = (
+    "Amazonas", "Áncash", "Apurímac", "Arequipa", "Ayacucho", "Cajamarca", "Callao", "Cusco",
+    "Huancavelica", "Huánuco", "Ica", "Junín", "La Libertad", "Lambayeque", "Lima", "Loreto",
+    "Madre de Dios", "Moquegua", "Pasco", "Piura", "Puno", "San Martín", "Tacna", "Tumbes", "Ucayali",
+)
+
+
+class ZonaDatasetIn(BaseModel):
+    """Sector del dataset (D32): toda la cobertura, departamentos o un radio alrededor de un activo."""
+
+    tipo: Literal["todo", "departamentos", "circulo"] = "todo"
+    departamentos: list[Literal[DEPARTAMENTOS]] = Field(default_factory=list, max_length=25)  # type: ignore[valid-type]
+    nombre: str | None = Field(default=None, max_length=120)
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
+    radio_km: float | None = Field(default=None, gt=0, le=2000)
+
+    @model_validator(mode="after")
+    def _completa(self) -> "ZonaDatasetIn":
+        if self.tipo == "departamentos" and not self.departamentos:
+            raise ValueError("elija al menos un departamento")
+        if self.tipo == "circulo" and (self.lat is None or self.lon is None or self.radio_km is None):
+            raise ValueError("el radio necesita latitud, longitud y radio en km")
+        return self
+
+
 class DatasetCreateIn(BaseModel):
     name: str = Field(min_length=3, max_length=120)
     description: str | None = Field(default=None, max_length=500)
@@ -35,6 +62,7 @@ class DatasetCreateIn(BaseModel):
     desde: date
     hasta: date
     reglas: ReglasLimpiezaIn = Field(default_factory=ReglasLimpiezaIn)
+    zona: ZonaDatasetIn = Field(default_factory=ZonaDatasetIn)
     variables: list[Literal[VARIABLES_DISPONIBLES]] = Field(min_length=1)  # type: ignore[valid-type]
     variable_objetivo: Literal[VARIABLES_DISPONIBLES] | None = None  # type: ignore[valid-type]
     #: Partición temporal: entrenamiento antes de este día, prueba desde este día.

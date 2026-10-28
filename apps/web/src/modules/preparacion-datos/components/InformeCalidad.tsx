@@ -84,11 +84,21 @@ export default function InformeCalidad({ informe }: { informe: Informe }) {
         </div>
       )}
 
+      <p className="text-xs text-content-secondary">
+        <b className="font-semibold text-content">Zona:</b> {informe.zona?.descripcion ?? "Toda la cobertura del catálogo (Perú y alrededores)"}
+      </p>
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Bloque titulo="Filas">
           <Filas
             filas={[
-              ["Del catálogo (periodo)", n(informe.filas_origen)],
+              ...(informe.zona && informe.zona.tipo !== "todo"
+                ? ([
+                    ["Del catálogo (periodo)", n(informe.zona.eventos_del_periodo)],
+                    ["Fuera de la zona", n(informe.zona.fuera_de_zona)],
+                  ] as [string, string][])
+                : []),
+              [informe.zona && informe.zona.tipo !== "todo" ? "En la zona" : "Del catálogo (periodo)", n(informe.filas_origen)],
               ["Quitadas por las reglas", n(totalEliminadas)],
               ["En el dataset", n(informe.filas_finales)],
             ]}
