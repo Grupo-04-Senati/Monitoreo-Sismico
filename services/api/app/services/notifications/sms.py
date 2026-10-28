@@ -4,6 +4,10 @@ Solo envía si están `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_FROM_N
 la entrega se registra como **simulada**: nunca se informa como enviado un SMS que no salió.
 Las credenciales se leen solo del entorno y no se registran en logs ni en la base.
 
+Cuenta de prueba de Twilio (`TWILIO_CUENTA_PRUEBA=true`): Twilio solo acepta sus plantillas
+fijas (el cuerpo es el nombre de la plantilla, p. ej. `sms_internal_alerts`) y escribe él el
+texto. El SMS llega al celular, pero sin el contenido del aviso ni el código de verificación.
+
 Usa la biblioteca estándar (`urllib`), como el conector del USGS, para no añadir
 dependencias y confiar en los certificados del sistema operativo.
 """
@@ -28,7 +32,13 @@ MOTIVOS = {
     21608: "número no verificado en la cuenta de prueba de Twilio",
     21610: "el destinatario se dio de baja respondiendo STOP",
     21614: "el número no puede recibir SMS",
+    572006: "la cuenta de prueba de Twilio solo acepta sus plantillas fijas (active TWILIO_CUENTA_PRUEBA o recargue la cuenta)",
 }
+
+#: Plantillas fijas de la cuenta de prueba (https://www.twilio.com/docs/usage/trials/try-out-sms).
+PLANTILLA_AVISO = "sms_internal_alerts"
+PLANTILLA_CODIGO = "sms_2fa"
+NOTA_PRUEBA = "Cuenta de prueba de Twilio: llegó su plantilla fija, no el texto del aviso."
 
 
 class SmsDesactivado(Exception):
@@ -43,11 +53,20 @@ def configurado() -> bool:
     return bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_FROM_NUMBER)
 
 
-def enviar(numero_e164: str, texto: str) -> str:
-    """Envía un SMS (bloqueante: llamar con `asyncio.to_thread`). Devuelve el id de Twilio."""
+def cuenta_prueba() -> bool:
+    """Twilio configurado con una cuenta de prueba: se envían sus plantillas fijas."""
+    return configurado() and settings.TWILIO_CUENTA_PRUEBA
+
+
+def enviar(numero_e164: str, texto: str, plantilla: str = PLANTILLA_AVISO) -> str:
+    """Envía un SMS (bloqueante: llamar con `asyncio.to_thread`). Devuelve el id de Twilio.
+
+    En la cuenta de prueba se envía `plantilla` en lugar de `texto` (Twilio no acepta otro cuerpo).
+    """
     if not configurado():
         raise SmsDesactivado("SMS desactivado (sin credenciales de Twilio): no se envió.")
-    datos = urllib.parse.urlencode({"To": numero_e164, "From": settings.TWILIO_FROM_NUMBER, "Body": texto}).encode()
+    cuerpo = plantilla if settings.TWILIO_CUENTA_PRUEBA else texto
+    datos = urllib.parse.urlencode({"To": numero_e164, "From": settings.TWILIO_FROM_NUMBER, "Body": cuerpo}).encode()
     credencial = base64.b64encode(f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}".encode()).decode()
     peticion = urllib.request.Request(
         URL_TWILIO.format(sid=settings.TWILIO_ACCOUNT_SID),
@@ -70,4 +89,7 @@ def enviar(numero_e164: str, texto: str) -> str:
         raise SmsFallido("Twilio no respondió (sin conexión)") from exc
 
 
-__all__ = ["SmsDesactivado", "SmsFallido", "configurado", "enviar", "MOTIVOS"]
+__all__ = [
+    "SmsDesactivado", "SmsFallido", "configurado", "cuenta_prueba", "enviar", "MOTIVOS",
+    "PLANTILLA_AVISO", "PLANTILLA_CODIGO", "NOTA_PRUEBA",
+]

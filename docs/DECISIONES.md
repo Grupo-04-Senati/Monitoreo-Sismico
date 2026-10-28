@@ -458,6 +458,13 @@ solo se registran los puntos grises.
 - **Costo:** la cuenta de prueba de Twilio envía solo a números verificados en su panel
   (hasta 5) con un prefijo de prueba; otros números quedan como entrega *fallida* con el
   motivo ("número no verificado en la cuenta de prueba"). Cada SMS real tiene costo.
+- **Cuenta de prueba (`TWILIO_CUENTA_PRUEBA=true`):** Twilio solo acepta en ella sus
+  plantillas fijas (error 572006 con texto propio). Entonces el cuerpo enviado es el nombre
+  de la plantilla (`sms_internal_alerts` para avisos, `sms_2fa` para el código): **el SMS
+  llega al celular**, pero con el texto de Twilio. El código de verificación se muestra en
+  pantalla (la titularidad del número ya la comprobó Twilio al verificarlo en su panel) y
+  cada entrega lo dice en su detalle. Con una cuenta de pago se pone en `false` y llega el
+  texto completo del aviso.
 - **Descartado:** WhatsApp (plantillas aprobadas por Meta, días de trámite), Telegram (no
   usa el número de teléfono) y que un administrador cargue números ajenos (sin consentimiento).
 

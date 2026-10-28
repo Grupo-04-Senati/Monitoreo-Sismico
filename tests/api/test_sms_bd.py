@@ -182,3 +182,64 @@ def test_twilio_rechaza_un_numero_no_verificado(monkeypatch):
     monkeypatch.setattr(sms.urllib.request, "urlopen", rechazo)
     with pytest.raises(sms.SmsFallido, match="no verificado en la cuenta de prueba"):
         sms.enviar("+51987654321", "hola")
+
+
+def _twilio_de_prueba(monkeypatch, cuenta_prueba: bool) -> None:
+    monkeypatch.setattr(settings, "TWILIO_ACCOUNT_SID", "AC_prueba")
+    monkeypatch.setattr(settings, "TWILIO_AUTH_TOKEN", "token_prueba")
+    monkeypatch.setattr(settings, "TWILIO_FROM_NUMBER", "+15550000000")
+    monkeypatch.setattr(settings, "TWILIO_CUENTA_PRUEBA", cuenta_prueba)
+
+
+def test_cuenta_de_prueba_envia_la_plantilla_fija_de_twilio(monkeypatch):
+    import io
+    import urllib.parse
+
+    cuerpos: list[str] = []
+
+    class _Respuesta(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+    def capturar(peticion, timeout):  # noqa: ARG001
+        cuerpos.append(urllib.parse.parse_qs(peticion.data.decode())["Body"][0])
+        return _Respuesta(b'{"sid": "SM1"}')
+
+    monkeypatch.setattr(sms.urllib.request, "urlopen", capturar)
+    _twilio_de_prueba(monkeypatch, cuenta_prueba=True)
+    assert sms.cuenta_prueba()
+    sms.enviar("+51987654321", "Sismo M5.5 en la mina")
+    sms.enviar("+51987654321", "su código es 123456", sms.PLANTILLA_CODIGO)
+    assert cuerpos == ["sms_internal_alerts", "sms_2fa"]  # nunca el texto propio
+
+    _twilio_de_prueba(monkeypatch, cuenta_prueba=False)  # cuenta de pago: el texto completo
+    sms.enviar("+51987654321", "Sismo M5.5 en la mina")
+    assert cuerpos[-1] == "Sismo M5.5 en la mina" and not sms.cuenta_prueba()
+
+
+def test_cuenta_de_prueba_muestra_el_codigo_y_anota_la_entrega(usuarios, monkeypatch):
+    viewer, admin = usuarios
+    _twilio_de_prueba(monkeypatch, cuenta_prueba=True)
+    monkeypatch.setattr(settings, "DEMO_SIMULACION", True)
+    enviados: list[tuple[str, str]] = []
+    monkeypatch.setattr(sms, "enviar", lambda numero, texto, plantilla=sms.PLANTILLA_AVISO: enviados.append((numero, plantilla)) or "SM1")
+    with TestClient(app) as c:
+        _como(viewer, "viewer")
+        r = c.post("/api/v1/me/telefono", json={"telefono": "987654321", "consentimiento": True}).json()
+        assert r["simulado"] is False and r["sms_cuenta_prueba"] is True and len(r["codigo_demo"]) == 6
+        assert enviados == [("+51987654321", "sms_2fa")]
+        assert c.post("/api/v1/me/telefono/verificar", json={"codigo": r["codigo_demo"]}).json()["verificado"] is True
+
+        _como(admin, "admin")
+        regla = {"name": "prueba_sms_plantilla", "condicion": {"magnitud_minima": 4.0},
+                 "zona": {"tipo": "circulo", "nombre": "Mina", "lat": -16.4, "lon": -71.5, "radio_km": 150},
+                 "canales": ["app", "sms"], "roles_sms": ["viewer"], "cooldown_minutos": 0}
+        rid = c.post("/api/v1/alert-rules", json=regla).json()["id"]
+        c.post(f"/api/v1/alert-rules/{rid}/activate")
+        aviso = c.post("/api/v1/demo/simulate", json={"zona": "mina_arequipa", "magnitud": 5.5, "cantidad": 1}).json()["avisos"][0]
+        entrega = [e for e in c.post(f"/api/v1/alerts/{aviso['id']}/approve").json()["entregas"] if e["channel"] == "sms"][0]
+        assert entrega["status"] == "entregada" and "plantilla fija" in entrega["error"]
+        assert c.get("/api/v1/settings").json()["entorno"]["sms"]["cuenta_prueba"] is True
