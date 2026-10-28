@@ -1172,15 +1172,15 @@ export default function DashboardPage() {
             {expanded === "mapa" && (
               <div className={m.full ? "relative flex-1 min-h-0" : "relative"}>
                 <div className={m.full ? "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--map-w))] gap-3.5 h-full" : "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,var(--map-w))] gap-3.5"}>
-                  {/* Capa base pendiente: sin GeoJSON oficial no se dibuja geografía */}
-                  <div className={`chart-plot flex min-h-[300px] items-center justify-center rounded-lg px-6 text-center ${m.full ? "h-full" : ""}`}>
-                    <div>
-                      <p className="text-sm font-semibold text-content">Mapa por departamento</p>
-                      <p className="mt-1 text-xs text-content-muted">
-                        Los eventos sobre los límites oficiales están en el{" "}
-                        <Link to="/mapa-sismico" className="font-medium text-accent-700 underline dark:text-accent-300">Mapa sísmico</Link>.
-                      </p>
+                  {/* Departamentos (límites del INEI) sombreados con los sismos de los filtros del modal */}
+                  <div className={`chart-plot flex flex-col rounded-lg p-2 ${m.full ? "h-full min-h-0" : "h-[440px]"}`}>
+                    <div className="min-h-0 flex-1">
+                      <MiniMapa vista="peru" regiones={mBase.map((e) => e.region)} />
                     </div>
+                    <p className="mt-1 text-center text-[11px] text-content-muted">
+                      Más oscuro = más sismos · detalle por punto, radio y vista mundial en el{" "}
+                      <Link to="/mapa-sismico" className="font-medium text-accent-700 underline dark:text-accent-300">Mapa sísmico</Link>.
+                    </p>
                   </div>
 
                   {/* Divisor arrastrable: ajusta el ancho del panel de regiones */}
@@ -1247,7 +1247,7 @@ export default function DashboardPage() {
                       </table>
                     </div>
                     <p className="mt-1.5 shrink-0 text-[11px] text-content-muted">
-                      Las {REGION_OPTIONS.length} regiones suman n={mapTable.total}. Las regiones son solo nombres: no hay provincias ni contornos inventados.
+                      Las {REGION_OPTIONS.length} regiones suman n={mapTable.total}. Límites oficiales del INEI; los sismos fuera del Perú no tienen departamento y no se cuentan.
                     </p>
                   </div>
                 </div>
