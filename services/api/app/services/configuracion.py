@@ -242,6 +242,11 @@ async def entorno(db: AsyncSession) -> dict[str, Any]:
         },
         # Sin secretos: solo si Twilio está configurado y el número emisor (público).
         "sms": {"configurado": canal_sms.configurado(), "emisor": settings.TWILIO_FROM_NUMBER or None},
+        # Quién programa la ingesta: Celery beat (producción) o la propia API (demo, D33).
+        "sincronizacion": {
+            "en_proceso": settings.SYNC_EN_PROCESO,
+            "cada_minutos": settings.INGESTION_INTERVAL_MINUTES,
+        },
         "acceso": {
             "intentos_antes_de_bloqueo": login_throttle.MAX_INTENTOS,
             "bloqueo_minutos": login_throttle.BLOQUEO_SEG // 60,

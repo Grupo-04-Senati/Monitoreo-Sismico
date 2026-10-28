@@ -42,7 +42,17 @@ from app.services.monitoreo import latencias
 async def lifespan(_: FastAPI):
     # En producción no se arranca con secretos o ajustes de desarrollo (PDF §12).
     verificar_arranque(settings)
+    # Sin Celery beat (demo de Render): la API sincroniza las fuentes por su cuenta (D33).
+    tarea_sync = None
+    if settings.SYNC_EN_PROCESO:
+        import asyncio
+
+        from app.services.sync_en_proceso import ciclo
+
+        tarea_sync = asyncio.create_task(ciclo())
     yield
+    if tarea_sync is not None:
+        tarea_sync.cancel()
     # No perder eventos de auditoría que aún se están escribiendo al apagar.
     await esperar_auditoria()
 

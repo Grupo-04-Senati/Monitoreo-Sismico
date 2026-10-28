@@ -18,6 +18,12 @@ export default function PanelEntorno({ entorno: e }: { entorno: Entorno }) {
     ],
     ["Servidor SMTP", e.correo.servidor ?? "—"],
     ["Remitente", e.correo.remitente ?? "—"],
+    [
+      "Sincronización automática",
+      e.sincronizacion?.en_proceso
+        ? `En la propia API, cada ${e.sincronizacion.cada_minutos} min (demo sin worker)`
+        : `Worker programado (Celery beat), cada ${e.sincronizacion?.cada_minutos ?? 15} min`,
+    ],
     ["SMS de avisos (Twilio)", e.sms?.configurado ? `Configurado · emisor ${e.sms.emisor ?? "—"}` : "Sin configurar (entregas “simuladas”)"],
     ["Bloqueo de acceso", `${e.acceso.intentos_antes_de_bloqueo} intentos fallidos → ${e.acceso.bloqueo_minutos} min`],
     ["Límite por IP", `${e.acceso.intentos_por_ip_por_minuto} intentos por minuto`],

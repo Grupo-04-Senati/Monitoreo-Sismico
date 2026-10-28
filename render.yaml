@@ -49,6 +49,10 @@ services:
       # Simulador de sismos ficticios (marcados [SIMULADO]) solo para esta demostración.
       - key: DEMO_SIMULACION
         value: "true"
+      # Sin worker en el plan gratuito: la API sincroniza el USGS cada 15 min (D33).
+      # El workflow "Demo despierta" la visita cada 5 min para que Render no la duerma.
+      - key: SYNC_EN_PROCESO
+        value: "true"
       # SMS de avisos (D31): se completan a mano en Render con los datos de Twilio.
       # Vacíos, los SMS quedan "simulados". El Auth Token es secreto: nunca en el repo.
       - key: TWILIO_ACCOUNT_SID

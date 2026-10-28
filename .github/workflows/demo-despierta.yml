@@ -1,0 +1,24 @@
+name: Demo despierta
+
+# Visita la demo de Render cada 5 minutos para que el plan gratuito no la duerma (se
+# duerme a los 15 min sin visitas) y la sincronización automática (D33) siga corriendo.
+# Solo para la semana de demostración. Para apagarlo: pestaña Actions → "Demo despierta"
+# → "..." → Disable workflow (o borrar este archivo). GitHub puede atrasar unos minutos
+# las ejecuciones programadas en horas de mucha carga.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  visitar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Visitar /health/ready de la demo
+        env:
+          # Otra dirección: variable del repositorio DEMO_URL (Settings → Variables).
+          DEMO_URL: ${{ vars.DEMO_URL || 'https://sismo-demo.onrender.com' }}
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 90 "$DEMO_URL/health/ready"

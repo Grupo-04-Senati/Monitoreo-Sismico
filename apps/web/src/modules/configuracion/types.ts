@@ -26,6 +26,7 @@ export interface Entorno {
   sesion_minutos: number;
   correo: { activado: boolean; configurado: boolean; servidor: string | null; remitente: string | null };
   sms?: { configurado: boolean; emisor: string | null };
+  sincronizacion?: { en_proceso: boolean; cada_minutos: number };
   acceso: { intentos_antes_de_bloqueo: number; bloqueo_minutos: number; intentos_por_ip_por_minuto: number; almacen: string };
   advertencias: string[];
 }

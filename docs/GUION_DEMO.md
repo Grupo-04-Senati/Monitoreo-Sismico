@@ -151,4 +151,4 @@ para cambiar de usuario sin cerrar sesión.
 
 - 414 pruebas automáticas del backend, 18 de pantallas (incluida accesibilidad WCAG AA),
   despliegue con HTTPS y simulacro de restauración verificados en cada cambio (CI).
-- Decisiones documentadas (D14–D32), manual técnico y checklist de aceptación en `docs/`.
+- Decisiones documentadas (D14–D33), manual técnico y checklist de aceptación en `docs/`.
